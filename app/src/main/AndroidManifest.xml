@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="jp.yksolution.android.sms.smsnotice">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".PowerOnStarter">
+
+            <!-- 受信するBroadcastIntentの種類を設定 -->
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".services.ServiceMain"
+            android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".services.EventService"
+            android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".services.DbService"
+            android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".services.MessageService"
+            android:enabled="true"
+            android:exported="true" />
+    </application>
+
+    <uses-permission-sdk-23 android:name="android.permission.READ_CONTACTS" />
+    <uses-permission-sdk-23 android:name="android.permission.SEND_SMS"/>
+    <uses-permission-sdk-23 android:name="android.permission.RECEIVE_SMS"/>
+
+</manifest>
