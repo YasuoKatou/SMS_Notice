@@ -2,6 +2,11 @@ package jp.yksolution.android.sms.smsnotice.entity;
 
 import jp.yksolution.android.sms.smsnotice.dao.MessageDao;
 
+/**
+ * メッセージ送信管理テーブルエンティティ.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class MessageEntity extends EntityBase {
     public static class PROC_ID {
         public static final int NEW_MESSAGE = 1;

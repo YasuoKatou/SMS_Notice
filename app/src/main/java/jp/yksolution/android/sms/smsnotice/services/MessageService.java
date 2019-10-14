@@ -24,6 +24,11 @@ import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.MessageEntity;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
+/**
+ * SMS送信サービス.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class MessageService extends ServiceBase implements DaoCallback {
     private static String SENT = "SMS_SENT";
     private static String DELIVERED = "SMS_DELIVERED";

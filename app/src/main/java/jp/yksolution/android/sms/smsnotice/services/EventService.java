@@ -15,6 +15,11 @@ import java.util.Date;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
+/**
+ * イベント検知サービス.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class EventService extends ServiceBase {
     @Override
     public void onCreate() {

@@ -8,6 +8,11 @@ import android.util.Log;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 電話帳データ取得クラス
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class MyContacts {
     private final static String TAG = MyContacts.class.getSimpleName();
     private final Context context;
@@ -15,53 +20,34 @@ public class MyContacts {
         this.context = context;
     }
 
+    /**
+     * 電話帳データエンティティ.
+     */
     public static class Entity {
+        /** id. */
         private final String id;
+        public Entity(String id) { this.id = id; }
+        public String getId() { return id; }
+
+        /** 電話番号 */
         private String phoneNo;
+        public String getPhoneNo() { return this.phoneNo; }
+        public void setPhoneNo(String phoneNo) { this.phoneNo = phoneNo; }
+
+        /** 氏名. */
         private String name;
+        public String getName() { return this.name; }
+        public void setName(String name) { this.name = name; }
+
+        /** メモ. */
         private String note;
+        public String getNote() { return this.note; }
+        public void setNote(String note) { this.note = note; }
 
-        public String getCompany() {
-            return company;
-        }
-
-        public void setCompany(String company) {
-            this.company = company;
-        }
-
+        /** 会社名. */
         private String company;
-
-        public Entity(String id) {
-            this.id = id;
-        }
-
-        public void setPhoneNo(String phoneNo) {
-            this.phoneNo = phoneNo;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public void setNote(String note) {
-            this.note = note;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public String getPhoneNo() {
-            return phoneNo;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getNote() {
-            return note;
-        }
+        public String getCompany() { return this.company; }
+        public void setCompany(String company) { this.company = company; }
 
         @Override
         public String toString() {
@@ -73,6 +59,10 @@ public class MyContacts {
             return string.toString();
         }
 
+        /**
+         * 一覧出力用
+         * @return エンティティ情報
+         */
         public String toListString() {
             StringBuilder string = new StringBuilder(this.phoneNo);
             string.append(" (").append(this.name).append((")"));

@@ -17,6 +17,11 @@ import jp.yksolution.android.sms.smsnotice.dao.LogDao;
 import jp.yksolution.android.sms.smsnotice.dao.MessageDao;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 
+/**
+ * DBアクセスサービス
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class DbService extends ServiceBase {
 //    private final static String TAG = DbService.class.getSimpleName();
     public static final int MESSAGE_WHAT_EXEC_QUERY = 1;

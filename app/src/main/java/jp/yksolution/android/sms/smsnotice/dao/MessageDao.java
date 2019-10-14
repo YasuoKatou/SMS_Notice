@@ -13,10 +13,17 @@ import java.util.List;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.MessageEntity;
 
+/**
+ * メッセージ送信管理テーブルDao.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class MessageDao extends DaoBase {
     private static final String MY_NAME = MessageDao.class.getSimpleName();
 
+    /** メッセージ送信管理テーブルDaoのインスタンス. */
     private static final MessageDao thisInstance = new MessageDao();
+    /** メッセージ送信管理テーブル登録(insert)クエリー文字列. */
     private final String mSQL_Insert;
     /**
      * 空のコンストラクタを使用禁止にする
@@ -24,8 +31,17 @@ public class MessageDao extends DaoBase {
     private MessageDao () {
         this.mSQL_Insert = this.editInsert();
     }
+
+    /**
+     * メッセージ送信管理テーブルDaoインスタンスを取得する.
+     * @return メッセージ送信管理テーブルDao
+     */
     public static final MessageDao getInstance() { return thisInstance; }
 
+    /**
+     * メッセージ送信管理テーブル登録(insert)クエリー文字列を編集する.
+     * @return メッセージ送信管理テーブル登録(insert)クエリー文字列
+     */
     private static String editInsert() {
         StringBuffer insert = new StringBuffer("insert into t_msg");
         insert.append(" (phone_no,phone_name,message,status,create_date) values")
@@ -33,6 +49,11 @@ public class MessageDao extends DaoBase {
         return insert.toString();
     }
 
+    /**
+     * メッセージ送信管理テーブルに対するクエリーを実行する.
+     * @param db SQLiteDatabase
+     * @param e EntityBase
+     */
     @Override
     public void execute(SQLiteDatabase db, EntityBase e) {
         MessageEntity entity = (MessageEntity)e;
@@ -54,6 +75,11 @@ public class MessageDao extends DaoBase {
         }
     }
 
+    /**
+     * メッセージ送信管理テーブルにinsertするクエリーを実行する.
+     * @param db SQLiteDatabase
+     * @param entity MessageEntity
+     */
     private void appendMessage(SQLiteDatabase db, MessageEntity entity) {
         super.beginTransaction(db);
         try {
@@ -73,6 +99,11 @@ public class MessageDao extends DaoBase {
         }
     }
 
+    /**
+     * メッセージ送信管理テーブルから未送信のデータを１レコード取得する.
+     * @param db SQLiteDatabase
+     * @param entity MessageEntity
+     */
     private void selectSendMessage(SQLiteDatabase db, MessageEntity entity) {
         super.setStartTime();
         boolean distinct = false;
@@ -82,8 +113,8 @@ public class MessageDao extends DaoBase {
         String[] selectionArgs = new String[] {MessageEntity.NOTICE_STATUS.IDLE.toString()};
         String groupBy = null;
         String having = null;
-//        String orderBy = "create_date desc";
-        String orderBy = "create_date";
+        String orderBy = "create_date desc";
+//        String orderBy = "create_date";
         String limit = "0,1";
         MessageEntity sendSMS = null;
         try (Cursor cursor = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having, orderBy, limit)) {
@@ -107,6 +138,11 @@ public class MessageDao extends DaoBase {
         }
     }
 
+    /**
+     * メッセージ送信管理テーブルの送信結果を更新する.
+     * @param db SQLiteDatabase
+     * @param entity MessageEntity
+     */
     private void updateSendStatus(SQLiteDatabase db, MessageEntity entity) {
         super.beginTransaction(db);
         ContentValues values = new ContentValues();
@@ -124,6 +160,10 @@ public class MessageDao extends DaoBase {
         }
     }
 
+    /**
+     * メッセージ送信管理テーブル作成する.
+     * @param db SQLiteDatabase
+     */
     public static final void createMessageTable(SQLiteDatabase db) {
         StringBuilder ddl;
         String tag = LogDao.class.getSimpleName();

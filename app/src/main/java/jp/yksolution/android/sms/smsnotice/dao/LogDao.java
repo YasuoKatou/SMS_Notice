@@ -11,10 +11,17 @@ import java.util.List;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 
+/**
+ * ログテーブルDao.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class LogDao extends DaoBase {
     private static final String MY_NAME = LogDao.class.getSimpleName();
 
+    /** ログテーブルDaoのインスタンス. */
     private static final LogDao thisInstance = new LogDao();
+    /** ログ登録(insert)クエリー文字列. */
     private final String mSQL_Insert;
     /**
      * 空のコンストラクタを使用禁止にする
@@ -22,13 +29,22 @@ public class LogDao extends DaoBase {
     private LogDao () {
         this.mSQL_Insert = this.editInsert();
     }
+
+    /**
+     * ログテーブルDaoインスタンスを取得する.
+     * @return ログテーブルDao
+     */
     public static final LogDao getInstance() { return thisInstance; }
+//
+//    private LogEntity entity = null;
+//    public void setEntity(LogEntity entity) {
+//        this.entity = entity;
+//    }
 
-    private LogEntity entity = null;
-    public void setEntity(LogEntity entity) {
-        this.entity = entity;
-    }
-
+    /**
+     * ログ登録(insert)クエリー文字列を編集する.
+     * @return ログ登録(insert)クエリー文字列
+     */
     private static String editInsert() {
         StringBuffer insert = new StringBuffer("insert into t_log");
         insert.append(" (create_date,_level,contents) values")
@@ -36,6 +52,11 @@ public class LogDao extends DaoBase {
         return insert.toString();
     }
 
+    /**
+     * ログテーブルに対するクエリーを実行する.
+     * @param db SQLiteDatabase
+     * @param e EntityBase
+     */
     @Override public void execute(SQLiteDatabase db, EntityBase e) {
         LogEntity entity = (LogEntity)e;
         switch (entity.getProcId()) {
@@ -51,6 +72,11 @@ public class LogDao extends DaoBase {
         }
     }
 
+    /**
+     * ログをinsertするクエリーを実行する.
+     * @param db SQLiteDatabase
+     * @param entity LogEntity
+     */
     private void appendLog(SQLiteDatabase db, LogEntity entity) {
         super.beginTransaction(db);
         try {
@@ -68,6 +94,11 @@ public class LogDao extends DaoBase {
         }
     }
 
+    /**
+     * ログの一覧を取得するクエリーを実行する.
+     * @param db SQLiteDatabase
+     * @param entity LogEntity
+     */
     private void makeLogList(SQLiteDatabase db, LogEntity entity) {
         super.setStartTime();
         boolean distinct = false;
@@ -95,6 +126,10 @@ public class LogDao extends DaoBase {
                 ,"select log time : " + time + "ms");
     }
 
+    /**
+     * ログテーブルを作成する.
+     * @param db SQLiteDatabase
+     */
     public static final void createLogTable(SQLiteDatabase db) {
         StringBuilder ddl;
         String tag = LogDao.class.getSimpleName();

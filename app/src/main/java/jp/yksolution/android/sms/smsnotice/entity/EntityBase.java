@@ -5,6 +5,11 @@ import android.util.Log;
 import jp.yksolution.android.sms.smsnotice.dao.DaoCallback;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
+/**
+ * エンティティの基底クラス.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class EntityBase {
     /** このエンティティを処理するDaoクラス名. */
     protected String mDaoClassName;

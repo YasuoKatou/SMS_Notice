@@ -27,6 +27,11 @@ import jp.yksolution.android.sms.smsnotice.R;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
+/**
+ * サービス基底クラス.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public abstract class ServiceBase extends Service {
     private Looper mServiceLooper;
     protected ServiceHandler mServiceHandler;

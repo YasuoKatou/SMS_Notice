@@ -37,6 +37,11 @@ import jp.yksolution.android.sms.smsnotice.services.MessageService;
 import jp.yksolution.android.sms.smsnotice.services.ServiceBase;
 import jp.yksolution.android.sms.smsnotice.services.ServiceMain;
 
+/**
+ * メインアクティビティ.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, DaoCallback {
     private final static String TAG = MainActivity.class.getSimpleName();
     private static final String SERVICE_CLASS_NAME = ServiceMain.class.getSimpleName();

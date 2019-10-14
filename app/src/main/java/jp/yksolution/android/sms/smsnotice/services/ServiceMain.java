@@ -11,6 +11,11 @@ import android.util.Log;
 
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 
+/**
+ * サービスメインクラス.
+ * @author Y.Katou (YKSolution)
+ * @since 0.0.1
+ */
 public class ServiceMain extends ServiceBase {
     @Override
     public void onCreate() {
