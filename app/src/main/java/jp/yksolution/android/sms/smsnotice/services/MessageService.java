@@ -96,6 +96,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
             request.setMessage(message);
             request.setStatus(MessageEntity.NOTICE_STATUS.IDLE);
             request.setCreateDate(now);
+            request.setRetryCount(0);
             request.setBaseTime(nowLong + cnt);
             request.setDaoCallback((++cnt == contantNum) ? this : null);
             super.mDbService.requestBusiness(request);
@@ -180,6 +181,11 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 this.registMessage((String)msg.obj);
                 break;
             case MESSAGE_WHAT_SMS_SEND:
+                if (mProcessingMessageEntity != null) {
+                    Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+                            , "sms busy... then wait...");
+                    return;
+                }
                 Object o = msg.obj;
                 if (o instanceof MessageEntity) {
                     // SMS 送信
@@ -187,8 +193,8 @@ public class MessageService extends ServiceBase implements DaoCallback {
                     this.sendMessage(this.mProcessingMessageEntity.getPhoneNo()
                             , this.mProcessingMessageEntity.getMessage());
                 } else {
-//                    Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
-//                            , "cyclic message");
+                    Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+                            , "cyclic message");
                     // 未送信メッセージをＤＢから取得
                     MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE);
                     request.setDaoCallback(MessageService.this);
@@ -254,12 +260,15 @@ public class MessageService extends ServiceBase implements DaoCallback {
             MessageEntity.NOTICE_STATUS stat;
             long baseTime;
             int callCount = mProcessingMessageEntity.getRetryCount() + 1;
+            LogEntity.LOG_LEVEL logLevel;
             if (callCount < maxRetry) {
                 stat = MessageEntity.NOTICE_STATUS.RETRY;
                 baseTime = System.currentTimeMillis() + waitTime;
+                logLevel = LogEntity.LOG_LEVEL.WARN;
             } else {
                 stat = MessageEntity.NOTICE_STATUS.ERROR;
                 baseTime = mProcessingMessageEntity.getBaseTime();
+                logLevel = LogEntity.LOG_LEVEL.ERROR;
             }
             MessageEntity entity = mProcessingMessageEntity.deepCopy(MessageEntity.PROC_ID.SENT_MESSAGE);
             entity.setStatus(stat);
@@ -271,8 +280,9 @@ public class MessageService extends ServiceBase implements DaoCallback {
             MessageService.super.mDbService.requestBusiness(entity);
 
             // エラーログの登録
-            LogEntity logEntity = new LogEntity(LogEntity.LOG_LEVEL.ERROR, "SMS Send : " + errMsg);
+            LogEntity logEntity = new LogEntity(logLevel, "SMS Send : " + errMsg);
             MessageService.super.mDbService.requestLog(logEntity);
+            Log.d(DateTime.now() + " retry time : ", DateTime.dateTimeFormat(baseTime));
         }
 
         @Override
@@ -292,26 +302,26 @@ public class MessageService extends ServiceBase implements DaoCallback {
                     break;
                 case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
 //                        Toast.makeText(getBaseContext(), "Generic failure", Toast.LENGTH_SHORT).show();
-                    Log.d(tag, "Generic failure cause");
+                    Log.e(tag, "Generic failure cause");
                     this.updateSmsTable("[" + resultCode + "] : Generic failure cause");
                     break;
                 case SmsManager.RESULT_ERROR_NO_SERVICE:
 //                        Toast.makeText(getBaseContext(), "No service", Toast.LENGTH_SHORT).show();
-                    Log.d(tag, "service is currently unavailable");
+                    Log.e(tag, "service is currently unavailable");
                     this.updateSmsTable("[" + resultCode + "] : service is currently unavailable");
                     break;
                 case SmsManager.RESULT_ERROR_NULL_PDU:
 //                        Toast.makeText(getBaseContext(), "Null PDU", Toast.LENGTH_SHORT).show();
-                    Log.d(tag, "no pdu provided");
+                    Log.e(tag, "no pdu provided");
                     this.updateSmsTable("[" + resultCode + "] : no pdu provided");
                     break;
                 case SmsManager.RESULT_ERROR_RADIO_OFF:
 //                        Toast.makeText(getBaseContext(), "Radio off", Toast.LENGTH_SHORT).show();
-                    Log.d(tag, "radio was explicitly turned off");
+                    Log.e(tag, "radio was explicitly turned off");
                     this.updateSmsTable("[" + resultCode + "] : radio was explicitly turned off");
                     break;
                 default:
-                    Log.d(tag, "unknown error code : " + getResultCode());
+                    Log.e(tag, "unknown error code : " + getResultCode());
                     this.updateSmsTable("[" + resultCode + "] : unknown error code");
                     break;
             }
@@ -321,6 +331,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
             MessageService.super.mDbService.requestBusiness(request);
             // DBサービスをキックする
             kickDbService();
+            mProcessingMessageEntity = null;
         }
     }
     private class DeliveredReceiver extends BroadcastReceiver {

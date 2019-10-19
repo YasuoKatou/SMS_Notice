@@ -3,6 +3,7 @@ package jp.yksolution.android.sms.smsnotice.utils;
 import android.text.format.DateFormat;
 
 import java.util.Calendar;
+import java.util.Date;
 
 /**
  * 時刻処理ツール群.
@@ -16,5 +17,8 @@ public class DateTime {
      */
     public static String now() {
         return DateFormat.format("yyyy/MM/dd kk:mm:ss", Calendar.getInstance()).toString();
+    }
+    public static String dateTimeFormat(long msec) {
+        return DateFormat.format("yyyy/MM/dd kk:mm:ss", new Date(msec)).toString();
     }
 }

@@ -12,6 +12,7 @@ import java.util.List;
 
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.MessageEntity;
+import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
 /**
  * メッセージ送信管理テーブルDao.
@@ -44,8 +45,8 @@ public class MessageDao extends DaoBase {
      */
     private static String editInsert() {
         StringBuffer insert = new StringBuffer("insert into t_msg");
-        insert.append(" (phone_no,phone_name,message,status,base_time,create_date) values")
-                .append(" (?,?,?,?,?,?)");
+        insert.append(" (phone_no,phone_name,message,status,base_time,create_date,call_count) values")
+                .append(" (?,?,?,?,?,?,?)");
         return insert.toString();
     }
 
@@ -93,6 +94,7 @@ public class MessageDao extends DaoBase {
                 statement.bindString(4, entity.getStatus().toString());
                 statement.bindLong(5, entity.getBaseTime());
                 statement.bindString(6, entity.getCreateDate());
+                statement.bindLong(7, entity.getRetryCount());
                 statement.executeInsert();
                 db.setTransactionSuccessful();
             }
@@ -132,12 +134,12 @@ public class MessageDao extends DaoBase {
         entity.setMessageEntity(sendSMS);
         long time = super.getProcessTime();
         Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
-                ,"select send message : " + time + "ms");
+                ,"selected new send message : " + time + "ms");
         if (sendSMS == null) {
             Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
-                    ,"no more send message");
+                    ,"no more new send message");
         } else {
-            Log.d("next send SMS message", sendSMS.toString());
+            Log.d("new send SMS message", sendSMS.toString());
         }
     }
 
@@ -172,12 +174,12 @@ public class MessageDao extends DaoBase {
         entity.setMessageEntity(sendSMS);
         long time = super.getProcessTime();
         Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
-                ,"select send message : " + time + "ms");
+                ,"selected retry send message : " + time + "ms");
         if (sendSMS == null) {
             Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
-                    ,"no more send message");
+                    ,"no more retry send message (" + DateTime.dateTimeFormat(super.mStartTime) + ")");
         } else {
-            Log.d("next send SMS message", sendSMS.toString());
+            Log.d("retry send SMS message", sendSMS.toString());
         }
     }
 
