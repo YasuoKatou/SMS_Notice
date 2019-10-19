@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.Resources;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -12,6 +13,7 @@ import android.util.Log;
 
 import java.util.Date;
 
+import jp.yksolution.android.sms.smsnotice.R;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
@@ -44,6 +46,9 @@ public class EventService extends ServiceBase {
     @Override
     void executeMessage(Message msg) {
         Log.d(super.getLogTag(this.getClass().getSimpleName()), "executeMessage");
+        Resources res = getResources();
+        final long sleepTime = res.getInteger(R.integer.sleep_01);
+        final long cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
         if (msg.what == ServiceBase.SERVICE_WHAT_LOOP_EXIT) {
             // メッセージサービスの終了処理を要求
             mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
@@ -61,20 +66,30 @@ public class EventService extends ServiceBase {
             Log.e(super.getLogTag(this.getClass().getSimpleName()), "不明なWHAT : " + msg.what);
             return;
         }
+        boolean oneTime = true;
         long count = 0L;                                // 処理回数
         long mxTime = 0L;                               // 最大処理時間
         long time1 = System.currentTimeMillis();        // 現在時刻
-        // 次の１０秒を設定
-        time1 = time1 - (time1 % 10000) + 10000;
+        long time3 = time1 + cyclicPostTime;            // 次の定周期メッセージの時刻
+        time1 = time1 - (time1 % 10000) + 10000;        // 次の１０秒を設定
         while(this.mExecuting) {
             long time2 = System.currentTimeMillis();
             try {
-                Thread.sleep(1000L);
+                Thread.sleep(sleepTime);
 //                Log.d(super.getLogTag(this.getClass().getSimpleName())
 //                        , super.now() + " : executeMessage in loop");
                 // TODO ここに処理を実装する
-                if (count == 5) {
-                    this.mMessageService.registMessage("test message : " + DateTime.now());
+                if (count == 5 && oneTime) {
+                    oneTime = false;
+                    String text = "test message : " + DateTime.now();
+                    this.mMessageServiceHandler.sendMessage(Message.obtain(
+                            this.mMessageServiceHandler, MessageService.MESSAGE_WHAT_SMS_REGIST, text));
+                }
+                if (time3 < time2) {    // あまり厳密でないが、ソースをシンプルにする方が優先
+                    // メッセージサービスに空のメッセージをPOSTする
+                    this.mMessageServiceHandler.sendMessage(Message.obtain(
+                            this.mMessageServiceHandler, MessageService.MESSAGE_WHAT_SMS_SEND, null));
+                    time3 = time2 + cyclicPostTime;
                 }
             } catch (Exception ex) {
                 Log.e("ERROR", ex.toString());
@@ -159,5 +174,4 @@ public class EventService extends ServiceBase {
             Log.i(Thread.currentThread().getName(), "イベントサービスは、メッセージサービスから切断されました.");
         }
     };
-
 }

@@ -40,6 +40,13 @@ public class EntityBase {
     public final void setResult(RESULT result) { this.mResult = result; }
     public final RESULT getResult() { return this.mResult; }
 
+    protected void deepCopy(EntityBase entity) {
+        entity.mProcId = this.mProcId;
+        entity.mDaoClassName = this.mDaoClassName;
+        entity.mDaoCallback = this.mDaoCallback;
+        entity.mResult = this.mResult;
+    }
+
     /**
      * 現在時刻を取得する.
      * @return 日時文字列.

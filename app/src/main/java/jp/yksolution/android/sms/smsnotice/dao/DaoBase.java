@@ -17,7 +17,7 @@ public abstract class DaoBase {
     abstract public void execute(SQLiteDatabase db, EntityBase entty);
 
     /** 処理開始日時. */
-    private long mStartTime;
+    protected long mStartTime;
     /**
      * 処理開始日時を取得する.
      */

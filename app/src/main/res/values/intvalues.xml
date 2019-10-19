@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        イベントサービスで参照する定数（xxx_01）
+     -->
+    <!-- ループ内でsleepする時間（msec） -->
+    <integer name="sleep_01">1000</integer>
+    <!-- メッセージサービスにメッセージをPOSTする間隔（msec） -->
+    <integer name="cyclic_post_time_01">60000</integer>
+
+    <!--
+        メッセージサービスで参照する定数（xxx_02）
+    -->
+    <!-- 送信失敗でリトライする間隔（msec）-->
+    <integer name="retry_timer_02">60000</integer>
+    <!-- 送信失敗でリトライする回数 -->
+    <integer name="retry_max_02">5</integer>
+</resources>

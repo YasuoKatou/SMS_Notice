@@ -44,8 +44,8 @@ public class MessageDao extends DaoBase {
      */
     private static String editInsert() {
         StringBuffer insert = new StringBuffer("insert into t_msg");
-        insert.append(" (phone_no,phone_name,message,status,create_date) values")
-                .append(" (?,?,?,?,?)");
+        insert.append(" (phone_no,phone_name,message,status,base_time,create_date) values")
+                .append(" (?,?,?,?,?,?)");
         return insert.toString();
     }
 
@@ -63,8 +63,11 @@ public class MessageDao extends DaoBase {
             case MessageEntity.PROC_ID.NEW_MESSAGE:
                 this.appendMessage(db, entity);
                 break;
-            case MessageEntity.PROC_ID.SELECT_MESSAGE:
+            case MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE:
                 this.selectSendMessage(db, entity);
+                break;
+            case MessageEntity.PROC_ID.SELECT_RETRY_MESSAGE:
+                this.selectRetrySendMessage(db, entity);
                 break;
             case MessageEntity.PROC_ID.SENT_MESSAGE:
                 this.updateSendStatus(db, entity);
@@ -88,7 +91,8 @@ public class MessageDao extends DaoBase {
                 statement.bindString(2, entity.getPhoneName());
                 statement.bindString(3, entity.getMessage());
                 statement.bindString(4, entity.getStatus().toString());
-                statement.bindString(5, entity.getCreateDate());
+                statement.bindLong(5, entity.getBaseTime());
+                statement.bindString(6, entity.getCreateDate());
                 statement.executeInsert();
                 db.setTransactionSuccessful();
             }
@@ -113,8 +117,7 @@ public class MessageDao extends DaoBase {
         String[] selectionArgs = new String[] {MessageEntity.NOTICE_STATUS.IDLE.toString()};
         String groupBy = null;
         String having = null;
-        String orderBy = "create_date desc";
-//        String orderBy = "create_date";
+        String orderBy = "base_time";
         String limit = "0,1";
         MessageEntity sendSMS = null;
         try (Cursor cursor = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having, orderBy, limit)) {
@@ -139,6 +142,46 @@ public class MessageDao extends DaoBase {
     }
 
     /**
+     * メッセージ送信管理テーブルから再送のデータを１レコード取得する.
+     * @param db SQLiteDatabase
+     * @param entity MessageEntity
+     */
+    private void selectRetrySendMessage(SQLiteDatabase db, MessageEntity entity) {
+        super.setStartTime();
+        boolean distinct = false;
+        String table = "t_msg";
+        String[] columns = new String[]{"id", "phone_no", "phone_name", "message", "call_count"};
+        String selection = "status = ? and base_time < ?";
+        String[] selectionArgs = new String[] {MessageEntity.NOTICE_STATUS.RETRY.toString()
+                                             , Long.toString(super.mStartTime)};
+        String groupBy = null;
+        String having = null;
+        String orderBy = "base_time";
+        String limit = "0,1";
+        MessageEntity sendSMS = null;
+        try (Cursor cursor = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having, orderBy, limit)) {
+            if (cursor.moveToNext()) {
+                sendSMS = new MessageEntity();
+                sendSMS.setId(cursor.getInt(0));
+                sendSMS.setPhoneNo(cursor.getString(1));
+                sendSMS.setPhoneName(cursor.getString(2));
+                sendSMS.setMessage(cursor.getString(3));
+                sendSMS.setRetryCount(cursor.getInt(4));
+            }
+        }
+        entity.setMessageEntity(sendSMS);
+        long time = super.getProcessTime();
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                ,"select send message : " + time + "ms");
+        if (sendSMS == null) {
+            Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    ,"no more send message");
+        } else {
+            Log.d("next send SMS message", sendSMS.toString());
+        }
+    }
+
+    /**
      * メッセージ送信管理テーブルの送信結果を更新する.
      * @param db SQLiteDatabase
      * @param entity MessageEntity
@@ -147,11 +190,14 @@ public class MessageDao extends DaoBase {
         super.beginTransaction(db);
         ContentValues values = new ContentValues();
         values.put("status", entity.getStatus().toString());
+        values.put("call_count", entity.getRetryCount());
+        values.put("base_time", entity.getBaseTime());
         values.put("update_date", entity.getUpdateDate());
         String errMsg = entity.getErrorMessage();
         if (errMsg != null) values.put("err_msg", errMsg);
+        String[] whereArgs = new String[] {Integer.toString(entity.getId())};
         try {
-            db.update("t_msg", values, "id = " + entity.getId(), null);
+            db.update("t_msg", values, "id = ?", whereArgs);
             db.setTransactionSuccessful();
         } finally {
             long time = super.endTransaction(db);
@@ -177,7 +223,7 @@ public class MessageDao extends DaoBase {
            .append(",status text not null")      // 送信状態
            .append(",err_msg text")              // エラーメッセージ
            .append(",call_count integer")        // 再送回数
-           .append(",base_time int")             // 基準時間
+           .append(",base_time int not null")   // 基準時間
            .append(",create_date text not null") // 作成日時
            .append(",update_date text")          // 更新日時
            .append(",delivered text")            // 既読日時

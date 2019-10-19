@@ -9,9 +9,14 @@ import jp.yksolution.android.sms.smsnotice.dao.MessageDao;
  */
 public class MessageEntity extends EntityBase {
     public static class PROC_ID {
+        /** 新規メッセージの登録. */
         public static final int NEW_MESSAGE = 1;
-        public static final int SELECT_MESSAGE = 2;
-        public static final int SENT_MESSAGE = 3;
+        /** 未送信のメッセージを取得. */
+        public static final int SELECT_IDLE_MESSAGE = 2;
+        /** 再送メッセージを取得. */
+        public static final int SELECT_RETRY_MESSAGE = 3;
+        /** 送信結果を更新. */
+        public static final int SENT_MESSAGE = 4;
     }
 
     public static enum NOTICE_STATUS {
@@ -60,9 +65,9 @@ public class MessageEntity extends EntityBase {
     public void setRetryCount(int retryCount) { this.retryCount = retryCount; }
 
     /** 基準時刻(リトライを行う時刻を設定する) */
-    private int baseTime;
-    public int getBaseTime() { return this.baseTime; }
-    public void setBaseTime(int baseTime) { this.baseTime = baseTime; }
+    private long baseTime;
+    public long getBaseTime() { return this.baseTime; }
+    public void setBaseTime(long baseTime) { this.baseTime = baseTime; }
 
     /** 作成日時. */
     private String createDate;
@@ -98,5 +103,21 @@ public class MessageEntity extends EntityBase {
                 .append(", error message : ").append(this.errorMessage)
                 .append(")");
         return sb.toString();
+    }
+
+    public MessageEntity deepCopy(int procId) {
+        MessageEntity clone = new MessageEntity(procId);
+        clone.id = this.id;
+        clone.phoneNo = this.phoneNo;
+        clone.phoneName = this.phoneName;
+        clone.message = this.message;
+        clone.status = this.status;
+        clone.errorMessage = this.errorMessage;
+        clone.retryCount = this.retryCount;
+        clone.baseTime = this.baseTime;
+        clone.createDate = this.createDate;
+        clone.updateDate = this.updateDate;
+        clone.deliveredDate = this.deliveredDate;
+        return clone;
     }
 }

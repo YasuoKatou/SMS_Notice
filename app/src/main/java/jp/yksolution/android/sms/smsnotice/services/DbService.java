@@ -50,8 +50,8 @@ public class DbService extends ServiceBase {
 
     @Override
     public void executeMessage(Message msg) {
-        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
-                , "executeMessage : " + ((msg == null) ? "null" : msg.toString()));
+//        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+//                , "executeMessage : " + ((msg == null) ? "null" : msg.toString()));
 
         EntityBase entity;
         do {
@@ -85,11 +85,14 @@ public class DbService extends ServiceBase {
      * @return Daoインスタンス
      */
     private DaoBase getDao(EntityBase entity) {
-        if ("LogDao".equals(entity.getDaoClassName())) {
+        String daoClassName = entity.getDaoClassName();
+        if ("LogDao".equals(daoClassName)) {
             return LogDao.getInstance();
-        } else if ("MessageDao".equals(entity.getDaoClassName())) {
+        } else if ("MessageDao".equals(daoClassName)) {
             return MessageDao.getInstance();
         }
+        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+                , "unsupportted dao class name : " + ((daoClassName == null) ? "null" : daoClassName));
         return null;
     }
 
