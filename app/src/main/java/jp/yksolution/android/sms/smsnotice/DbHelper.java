@@ -7,6 +7,7 @@ import android.util.Log;
 
 import jp.yksolution.android.sms.smsnotice.dao.LogDao;
 import jp.yksolution.android.sms.smsnotice.dao.MessageDao;
+import jp.yksolution.android.sms.smsnotice.dao.ServiceCounterDao;
 
 /**
  * データベースの管理<br/>
@@ -35,6 +36,7 @@ public class DbHelper extends SQLiteOpenHelper {
         Log.i(TAG, "onCreate version : " + db.getVersion());
         LogDao.createLogTable(db);
         MessageDao.createMessageTable(db);
+        ServiceCounterDao.createServiceCounterTable(db);
     }
 
     /**

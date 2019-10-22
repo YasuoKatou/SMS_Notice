@@ -20,21 +20,19 @@ public class LogDao extends DaoBase {
     private static final String MY_NAME = LogDao.class.getSimpleName();
 
     /** ログテーブルDaoのインスタンス. */
-    private static final LogDao thisInstance = new LogDao();
+    private static final LogDao mInstance = new LogDao();
     /** ログ登録(insert)クエリー文字列. */
     private final String mSQL_Insert;
     /**
      * 空のコンストラクタを使用禁止にする
      */
-    private LogDao () {
-        this.mSQL_Insert = this.editInsert();
-    }
+    private LogDao () { this.mSQL_Insert = this.editInsert(); }
 
     /**
      * ログテーブルDaoインスタンスを取得する.
      * @return ログテーブルDao
      */
-    public static final LogDao getInstance() { return thisInstance; }
+    public static final LogDao getInstance() { return mInstance; }
 //
 //    private LogEntity entity = null;
 //    public void setEntity(LogEntity entity) {

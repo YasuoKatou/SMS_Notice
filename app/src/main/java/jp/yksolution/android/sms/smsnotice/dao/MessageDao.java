@@ -23,7 +23,7 @@ public class MessageDao extends DaoBase {
     private static final String MY_NAME = MessageDao.class.getSimpleName();
 
     /** メッセージ送信管理テーブルDaoのインスタンス. */
-    private static final MessageDao thisInstance = new MessageDao();
+    private static final MessageDao mInstance = new MessageDao();
     /** メッセージ送信管理テーブル登録(insert)クエリー文字列. */
     private final String mSQL_Insert;
     /**
@@ -37,7 +37,7 @@ public class MessageDao extends DaoBase {
      * メッセージ送信管理テーブルDaoインスタンスを取得する.
      * @return メッセージ送信管理テーブルDao
      */
-    public static final MessageDao getInstance() { return thisInstance; }
+    public static final MessageDao getInstance() { return mInstance; }
 
     /**
      * メッセージ送信管理テーブル登録(insert)クエリー文字列を編集する.
