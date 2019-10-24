@@ -1,9 +1,12 @@
 package jp.yksolution.android.sms.smsnotice.dao;
 
+import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
+import jp.yksolution.android.sms.smsnotice.entity.ServiceCounterEntity;
 
 /**
  * サービス処理状況テーブルDao.
@@ -11,30 +14,18 @@ import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
  * @since 0.0.1
  */
 public class ServiceCounterDao extends DaoBase {
+    private static final String MY_NAME = ServiceCounterDao.class.getSimpleName();
 
     /** サービス処理状況テーブルDaoのインスタンス. */
     private static final ServiceCounterDao mInstance = new ServiceCounterDao();
-    /** サービス処理状況登録(insert)クエリー文字列. */
-    private final String mSQL_Insert;
 
-    private ServiceCounterDao() { mSQL_Insert = this.editInsert(); }
+    private ServiceCounterDao() {}
 
     /**
-     * サービス処理状況登録(insert)クエリー文字列を編集する.
-     * @return サービス処理状況登録(insert)クエリー文字列
+     * サービス処理状況テーブルDaoインスタンスを取得する.
+     * @return ログテーブルDao
      */
-    private static String editInsert() {
-        StringBuffer insert = new StringBuffer("insert into t_log");
-        insert.append(" (count_date")
-              .append(",proc_cnt_00,proc_max_00")
-              .append(",proc_cnt_10,proc_max_10")
-              .append(",proc_cnt_20,proc_max_20")
-              .append(",proc_cnt_30,proc_max_30")
-              .append(",proc_cnt_40,proc_max_40")
-              .append(",proc_cnt_50,proc_max_50")
-              .append(") values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        return insert.toString();
-    }
+    public static final ServiceCounterDao getInstance() { return mInstance; }
 
     /**
      * サービス処理状況に対するクエリーを実行する.
@@ -42,7 +33,77 @@ public class ServiceCounterDao extends DaoBase {
      * @param e EntityBase
      */
     @Override public void execute(SQLiteDatabase db, EntityBase e) {
+        ServiceCounterEntity entity = (ServiceCounterEntity)e;
+        switch (entity.getProcId()) {
+            case ServiceCounterEntity.PROC_ID.ADD_COUNT:
+                int count = addByUpdate(db, entity);
+                if (count == 0) {
+                    addByInsert(db, entity);
+                }
+                break;
+            default:
+                Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                        ,"not supported ProcId : " + entity.getProcId());
+        }
+    }
 
+    /**
+     * Updateでカウンタ情報（１０分値）を登録する.
+     * @param db SQLiteDatabase
+     * @param entity サービス処理状況テーブルエンティティ.
+     * @return 更新レコード数
+     */
+    private int addByUpdate(SQLiteDatabase db, ServiceCounterEntity entity) {
+        super.beginTransaction(db);
+        ContentValues values = new ContentValues();
+        int index10Minute = entity.get10MinuteIndex();
+        String colName = String.format("proc_cnt_%d0", index10Minute);
+        values.put(colName, entity.getProcCount());
+        colName = String.format("proc_max_%d0", index10Minute);
+        values.put(colName, entity.getProcMaxTime());
+        String[] whereArgs = new String[] {Long.toString(entity.getAggregateTime())};
+        int count = 0;
+        try {
+            count = db.update("t_svc_cnt", values, "count_date = ?", whereArgs);
+            db.setTransactionSuccessful();
+        } finally {
+            long time = super.endTransaction(db);
+            Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    ,"update counter log : " + time + "ms (update:" + count + ")");
+        }
+        return count;
+    }
+
+    /**
+     * Insertでカウンタ情報（１０分値）を登録する.
+     * @param db SQLiteDatabase
+     * @param entity サービス処理状況テーブルエンティティ.
+     * @return 更新レコード数
+     */
+    private void addByInsert(SQLiteDatabase db, ServiceCounterEntity entity) {
+        int index10Minute = entity.get10MinuteIndex();
+        String colNames = String.format("proc_cnt_%d0,proc_max_%d0", index10Minute, index10Minute);
+
+        StringBuffer insert = new StringBuffer("insert into t_svc_cnt");
+        insert.append(" (count_date,")
+              .append(colNames)
+              .append(") values (?,?,?)");
+
+        long count = 0;
+        super.beginTransaction(db);
+        try {
+            try (SQLiteStatement statement = db.compileStatement(insert.toString())) {
+                statement.bindLong(1, entity.getAggregateTime()); ;
+                statement.bindLong(2, entity.getProcCount());
+                statement.bindLong(3, entity.getProcMaxTime());
+                count = statement.executeInsert();
+                db.setTransactionSuccessful();
+            }
+        } finally {
+            long time = super.endTransaction(db);
+            Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    ,"insert counter log : " + time + "ms (insert:" + count + ")");
+        }
     }
 
     /**

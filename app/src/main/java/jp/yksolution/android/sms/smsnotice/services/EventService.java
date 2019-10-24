@@ -130,6 +130,7 @@ public class EventService extends ServiceBase {
         if (newEntity) {
             this.mAggregateDto.entity = new ServiceCounterEntity();
             this.mAggregateDto.entity.setAggregateTime(DateTime.roudDownMinute(now));   // 直近の00分00秒
+            this.mAggregateDto.entity.setDaoCallback(null);     // 更新結果は、不要
         }
         this.mAggregateDto.timeIndex = DateTime.get10MibuteIndex(now);
         this.mAggregateDto.next10Minute = DateTime.next10Mibute(now);               // 次の10分の開始日時
@@ -160,25 +161,16 @@ public class EventService extends ServiceBase {
         Log.d(DateTime.dateTimeFormat(now)+ " : " + super.getLogTag(MY_NAME)
                 , "change 10 numite : " + this.mAggregateDto.entity.toString());
         // TODO 10分間のカウントの結果をＤＢに保存
+        this.mAggregateDto.entity.setProcId(ServiceCounterEntity.PROC_ID.ADD_COUNT);
+        super.mDbService.requestMeasured(this.mAggregateDto.entity);    // ログのキュー登録
+        super.mDbServiceHandler.sendMessage(Message.obtain(super.mDbServiceHandler
+                , DbService.MESSAGE_WHAT_EXEC_QUERY, null));        // 書込みメッセージ
 
         // 集計Dtoを初期化する
         boolean newEntity = (this.mAggregateDto.entity.getAggregateTime() != DateTime.roudDownMinute(now));
         this.resetAggregateDto(now, newEntity);
 
         return now;
-    }
-
-    private void measuredLog(String dateTime, long count, long mxTime) {
-        // ログデータの編集
-        LogEntity entity = new LogEntity(LogEntity.LOG_LEVEL.INFO, String.format("c:%d, m:%d", count, mxTime));
-        entity.setLogDateTime(dateTime);
-
-        // ログのキュー登録
-        super.mDbService.requestMeasured(entity);
-
-        // ログ書込みメッセージ
-        super.mDbServiceHandler.sendMessage(Message.obtain(super.mDbServiceHandler
-                , DbService.MESSAGE_WHAT_EXEC_QUERY, null));
     }
 
     @Override

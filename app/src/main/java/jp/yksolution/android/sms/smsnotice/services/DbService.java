@@ -15,6 +15,7 @@ import jp.yksolution.android.sms.smsnotice.DbHelper;
 import jp.yksolution.android.sms.smsnotice.dao.DaoBase;
 import jp.yksolution.android.sms.smsnotice.dao.LogDao;
 import jp.yksolution.android.sms.smsnotice.dao.MessageDao;
+import jp.yksolution.android.sms.smsnotice.dao.ServiceCounterDao;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 
 /**
@@ -90,6 +91,8 @@ public class DbService extends ServiceBase {
             return LogDao.getInstance();
         } else if ("MessageDao".equals(daoClassName)) {
             return MessageDao.getInstance();
+        } else if ("ServiceCounterDao".equals(daoClassName)) {
+            return ServiceCounterDao.getInstance();
         }
         Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
                 , "unsupportted dao class name : " + ((daoClassName == null) ? "null" : daoClassName));
