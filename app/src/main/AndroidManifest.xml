@@ -26,10 +26,6 @@
         </receiver>
 
         <service
-            android:name=".services.ServiceMain"
-            android:enabled="true"
-            android:exported="true" />
-        <service
             android:name=".services.EventService"
             android:enabled="true"
             android:exported="true" />

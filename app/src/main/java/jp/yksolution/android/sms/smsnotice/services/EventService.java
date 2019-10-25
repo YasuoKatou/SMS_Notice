@@ -41,15 +41,20 @@ public class EventService extends ServiceBase {
         }
     }
 
+    private static final String TITLE = "監視サービス";
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        super.startCommand(MY_NAME, TITLE, startId);
+        super.appendLog(new LogEntity(LogEntity.LOG_LEVEL.INFO, "Event Service start."));
+        return START_STICKY;
+    }
+
     public static final int EVENT_SERVICE_WHAT_EXECUTE = 1002;
     private boolean mExecuting = false;
     private boolean mStopping = false;
     @Override
     void executeMessage(Message msg) {
         Log.d(super.getLogTag(MY_NAME), "executeMessage");
-        Resources res = getResources();
-        final long sleepTime = res.getInteger(R.integer.sleep_01);
-        final long cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
         if (msg.what == ServiceBase.SERVICE_WHAT_LOOP_EXIT) {
             // メッセージサービスの終了処理を要求
             mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
@@ -57,18 +62,40 @@ public class EventService extends ServiceBase {
             // サービス終了
             this.mExecuting = false;
         } else if (msg.what == EVENT_SERVICE_WHAT_EXECUTE) {
-            // サービス（ループ）開始
+            // サービス開始
             if (this.mExecuting) {
                 Log.i(super.getLogTag(MY_NAME), "executeMessage already executing");
                 return;
             }
             this.mExecuting = true;
+            new Thread(new EventSensorTask()).start();
         } else {
             Log.e(super.getLogTag(MY_NAME), "不明なWHAT : " + msg.what);
             return;
         }
+    }
+
+    private class EventSensorTask implements Runnable {
+        @Override
+        public void run() {
+            Resources res = getResources();
+            final long sleepTime = res.getInteger(R.integer.sleep_01);
+            final long cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
+            resetAggregateDto(System.currentTimeMillis(), true);
+            while (mExecuting) {
+//                Log.d("[" + Thread.currentThread().getName() + "]EventSensorTask","run");
+                try {
+                    Thread.sleep(sleepTime);
+                    // TODO ここに処理を実装する
+                } catch (Exception ex) {
+                    Log.e("[" + Thread.currentThread().getName() + "]EventSensorTask", ex.toString());
+                }
+                mAggregateDto.time1 = aggregateCount();
+            }
+            EventService.this.appendLog(new LogEntity(LogEntity.LOG_LEVEL.INFO, "Event Service end."));
+        }
+/*
         boolean oneTime = true;
-        this.resetAggregateDto(System.currentTimeMillis(), true);
 //        long time3 = time1 + cyclicPostTime;            // 次の定周期メッセージの時刻
 //        time1 = time1 - (time1 % 10000) + 10000;        // 次の１０秒を設定
         while(this.mExecuting) {
@@ -77,7 +104,6 @@ public class EventService extends ServiceBase {
                 Thread.sleep(sleepTime);
 //                Log.d(super.getLogTag(MY_NAME)
 //                        , super.now() + " : executeMessage in loop");
-                // TODO ここに処理を実装する
 //                if (count == 5 && oneTime) {
 //                    oneTime = false;
 //                    String text = "test message : " + DateTime.now();
@@ -93,7 +119,6 @@ public class EventService extends ServiceBase {
             } catch (Exception ex) {
                 Log.e(super.getLogTag(MY_NAME), ex.toString());
             }
-            this.mAggregateDto.time1 = this.aggregateCount();
 //            long now = System.currentTimeMillis();
 //            long procTime = now - time2;
 //            if (mxTime < procTime) mxTime = procTime;
@@ -112,6 +137,7 @@ public class EventService extends ServiceBase {
         }
         this.mStopping = false;
         Log.d(super.getLogTag(this.getClass().getSimpleName()), "exit executeMessage");
+ */
     }
 
     private static class AggregateDto {
@@ -160,7 +186,7 @@ public class EventService extends ServiceBase {
               , (int)this.mAggregateDto.mxTime);
         Log.d(DateTime.dateTimeFormat(now)+ " : " + super.getLogTag(MY_NAME)
                 , "change 10 numite : " + this.mAggregateDto.entity.toString());
-        // TODO 10分間のカウントの結果をＤＢに保存
+        // 10分間のカウントの結果をＤＢに保存
         this.mAggregateDto.entity.setProcId(ServiceCounterEntity.PROC_ID.ADD_COUNT);
         super.mDbService.requestMeasured(this.mAggregateDto.entity);    // ログのキュー登録
         super.mDbServiceHandler.sendMessage(Message.obtain(super.mDbServiceHandler

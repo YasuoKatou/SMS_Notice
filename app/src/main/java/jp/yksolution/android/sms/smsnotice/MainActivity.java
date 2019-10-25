@@ -33,9 +33,9 @@ import jp.yksolution.android.sms.smsnotice.dao.DaoCallback;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.services.DbService;
+import jp.yksolution.android.sms.smsnotice.services.EventService;
 import jp.yksolution.android.sms.smsnotice.services.MessageService;
 import jp.yksolution.android.sms.smsnotice.services.ServiceBase;
-import jp.yksolution.android.sms.smsnotice.services.ServiceMain;
 
 /**
  * メインアクティビティ.
@@ -44,7 +44,7 @@ import jp.yksolution.android.sms.smsnotice.services.ServiceMain;
  */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, DaoCallback {
     private final static String TAG = MainActivity.class.getSimpleName();
-    private static final String SERVICE_CLASS_NAME = ServiceMain.class.getSimpleName();
+    private static final String SERVICE_CLASS_NAME = EventService.class.getSimpleName();
     private Handler mHandler;
 
     @Override
@@ -62,8 +62,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // DBサービスをバインド
         bindService(new Intent(getApplicationContext(), DbService.class), this.mDbServiceConnection, Context.BIND_AUTO_CREATE);
-        // メッセージサービスをバインド
-        bindService(new Intent(getApplicationContext(), MessageService.class), this.mMessageServiceConnection, Context.BIND_AUTO_CREATE);
 
         // 電話帳のアクセス状態を表示
         this.checkContactsButton();
@@ -121,8 +119,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 this.allowSmsSend();
                 break;
             case R.id.btnShowLog:
-//                this.mMessageServiceHandler.sendMessage(Message.obtain(this.mMessageServiceHandler
-//                        , MessageService.MESSAGE_WHAT_SMS_SEND, null));
                 this.showLog();
                 break;
         }
@@ -139,52 +135,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             return;
         }
-        /*
-        // 参考にしたサイト：https://www.memory-lovers.blog/entry/2017/09/17/094145
-        //取得するカラムをは、名前とIDと誕生日
-//        String[] projection = new String[]{
-//                  ContactsContract.Contacts.DISPLAY_NAME
-//                , ContactsContract.CommonDataKinds.Event.CONTACT_ID
-//                , ContactsContract.CommonDataKinds.Event.START_DATE
-//        };
-        String[] projection = new String[]{
-                  ContactsContract.Data.CONTACT_ID
-                , ContactsContract.Data.MIMETYPE
-                , ContactsContract.CommonDataKinds.StructuredName.DATA1
-                , ContactsContract.CommonDataKinds.Phone.NUMBER
-                , ContactsContract.CommonDataKinds.Note.DATA1
-                , ContactsContract.CommonDataKinds.Organization.COMPANY
-        };
-//        String selection = "((" + ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "') or ("
-//                         + ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE + "'))";
-        String selection = ContactsContract.Data.MIMETYPE + "='" + ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE + "'";
-        try {
-            Cursor cursor = getContentResolver().query(
-                    ContactsContract.Data.CONTENT_URI                     // and use selection
-//                    ContactsContract.RawContacts.CONTENT_URI              // selection null
-//                    ContactsContract.Contacts.CONTENT_URI              // selection null
-//                    , null
-                    , projection
-                    , null
-//                    , selection
-                    , null, null);
-            while (cursor.moveToNext()) {
-////                int nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
-//                int nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LABEL);
-//                String name = cursor.getString(nameIndex);
-//                Log.i(ContactsContract.CommonDataKinds.Phone.LABEL, name);
-////                Toast.makeText(this, name, Toast.LENGTH_SHORT).show();
-                for (String colmnName : cursor.getColumnNames()) {
-                    String val = cursor.getString(cursor.getColumnIndex(colmnName));
-                    Log.i(colmnName, (val == null) ? "null" : val);
-                }
-            }
-        } catch (Exception ex) {
-            Log.e("Exception", ex.toString());
-        }
-        */
         List<String> contactsList = new ArrayList<>();
-        Map<String, MyContacts.Entity> contactMap = this.mMessageService.getContacts();
+        MyContacts contacts = new MyContacts(this);
+        Map<String, MyContacts.Entity> contactMap = contacts.editContacts();
         if (contactMap != null) {
             for (MyContacts.Entity entity : contactMap.values()) {
                 contactsList.add(entity.toListString());
@@ -277,37 +230,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startService() {
-        Intent intent = new Intent(getApplicationContext(), ServiceMain.class);
+        Intent intent = new Intent(getApplicationContext(), EventService.class);
         if (Build.VERSION.SDK_INT <= 25) {
             startService(intent);
-//        Toast.makeText(this, "MainActivity start service", Toast.LENGTH_SHORT).show();
         } else {
             startForegroundService(intent);
         }
         Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
-                , "サービスメインを起動しました");
+                , "アプリは、イベントサービスを起動しました");
         this.refreshButton();
 
-        // サービスメインをバインド
-        bindService(new Intent(getApplicationContext(), ServiceMain.class), this.mServiceMainConnection, Context.BIND_AUTO_CREATE);
+        // イベントサービスをバインド
+        bindService(new Intent(getApplicationContext(), EventService.class), this.mEventServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
     private void stopService() {
         Log.d("[" + Thread.currentThread().getName() + "]" + MainActivity.class.getSimpleName()
-                , "サービスメインを停止します");
+                , "イベントサービスを停止します");
 
-
-        // サービスメインを終了させる
-        this.mServiceMainHandler.sendMessage(Message.obtain(this.mServiceMainHandler
+        // イベントサービスを停止する
+        this.mEventServiceHandler.sendMessage(Message.obtain(this.mEventServiceHandler
                 , ServiceBase.SERVICE_WHAT_LOOP_EXIT, null));
+
         // アンバインド
-//        unbindService(this.mMessageServiceConnection);
-        unbindService(this.mServiceMainConnection);
-//        unbindService(this.mDbServiceConnection);
+        unbindService(this.mEventServiceConnection);
 
         // サービス停止
-        stopService(new Intent(getApplicationContext(), ServiceMain.class));
+        stopService(new Intent(getApplicationContext(), EventService.class));
         Toast.makeText(this, "サービスを停止しました", Toast.LENGTH_SHORT).show();
+
         this.refreshButton();
     }
 
@@ -330,53 +281,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for (ActivityManager.RunningServiceInfo item : _am.getRunningServices(Integer.MAX_VALUE)) {
             if (item.service.getShortClassName().endsWith(targetClassName)) {
                 Log.d("[" + Thread.currentThread().getName() + "]" + MainActivity.class.getSimpleName()
-                        , "サービスメインが実行中");
+                        , "イベントサービスが実行中");
                 return true;
             }
         }
         Log.d("[" + Thread.currentThread().getName() + "]" + MainActivity.class.getSimpleName()
-                , "サービスメインは、停止しています");
+                , "イベントサービスは、停止しています");
         return false;
     }
-/*
-    protected void refreshAppList(String targetClassName) {
-        List<String> classList = new ArrayList<>();
-        final Context _context = getApplicationContext();
-        ActivityManager _am = (ActivityManager) _context.getSystemService(android.content.Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo item : _am.getRunningServices(Integer.MAX_VALUE)) {
-//            classList.add(item.service.getClassName());
-            if (item.service.getShortClassName().endsWith(targetClassName)) {
-                classList.add(item.service.getShortClassName());
-            }
-        }
-        ListView lv = (ListView) findViewById(R.id.lstApp);
-        lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, classList));
-    }
-*/
-
-    /**
-     * サービスメイン
-     */
-//    protected ServiceMain mServiceMain = null;
-    private Handler mServiceMainHandler;
-    private ServiceConnection mServiceMainConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            ServiceBase.LocalBinder binder = (ServiceBase.LocalBinder)service;
-//            mServiceMain = (ServiceMain)binder.getService();
-            mServiceMainHandler = binder.getHadler();
-            // サービスの処理を開始する
-            mServiceMainHandler.sendMessage(Message.obtain(mServiceMainHandler
-                    , ServiceMain.SERVIE_MAIN_WHAT_EXECUTE, null));
-            Log.i(Thread.currentThread().getName(), "メインアクティビティは、サービスメインをバインドしました");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-//            mServiceMainHadle = null;
-            Log.i(Thread.currentThread().getName(), "メインアクティビティは、サービスメインから切断されました.");
-        }
-    };
 
     /**
      * DB アクセスサービス
@@ -390,37 +302,40 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mDbService = (DbService)binder.getService();
             mDbServiceHandler = binder.getHadler();
             Log.i("[" + Thread.currentThread().getName() + "]"
-                    , "メインアクティビティは、DBサービスをバインドしました");
+                    , "アプリは、DBサービスをバインドしました");
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
             mDbService = null;
             Log.i("[" + Thread.currentThread().getName() + "]"
-                    , "メインアクティビティは、DBサービスから切断されました.");
+                    , "アプリは、DBサービスから切断されました.");
         }
     };
 
     /**
-     * メッセージサービス
+     * イベントアクセスサービス
      */
-    private MessageService mMessageService;
-    private Handler mMessageServiceHandler;
-    private ServiceConnection mMessageServiceConnection = new ServiceConnection() {
+    private EventService mEventService;
+    private Handler mEventServiceHandler;
+    private ServiceConnection mEventServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             ServiceBase.LocalBinder binder = (ServiceBase.LocalBinder)service;
-            mMessageService = (MessageService)binder.getService();
-            mMessageServiceHandler = binder.getHadler();
+            mEventService = (EventService)binder.getService();
+            mEventServiceHandler = binder.getHadler();
             Log.i("[" + Thread.currentThread().getName() + "]"
-                    , "メインアクティビティは、メッセージサービスをバインドしました");
+                    , "アプリは、イベントサービスをバインドしました");
+            // イベントサービスを開始する
+            mEventServiceHandler.sendMessage(Message.obtain(mEventServiceHandler
+                    , EventService.EVENT_SERVICE_WHAT_EXECUTE, null));
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            mMessageService = null;
+            mEventService = null;
             Log.i("[" + Thread.currentThread().getName() + "]"
-                    , "メインアクティビティは、メッセージサービスから切断されました.");
+                    , "アプリは、イベントサービスから切断されました.");
         }
     };
 }

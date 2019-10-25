@@ -33,6 +33,7 @@ import jp.yksolution.android.sms.smsnotice.utils.DateTime;
  * @since 0.0.1
  */
 public abstract class ServiceBase extends Service {
+    private static final String MY_NAME = ServiceBase.class.getSimpleName();
     private Looper mServiceLooper;
     protected ServiceHandler mServiceHandler;
     private final class ServiceHandler extends Handler {
@@ -41,7 +42,7 @@ public abstract class ServiceBase extends Service {
         }
         @Override
         public void handleMessage(Message msg) {
-//            Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+//            Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME + ".ServiceHandler"
 //                    , "handleMessage : " + ((msg == null) ? "null" : msg.toString()));
             // 拡張クラスのメッセージハンドラーを呼び出す
             ServiceBase.this.executeMessage(msg);

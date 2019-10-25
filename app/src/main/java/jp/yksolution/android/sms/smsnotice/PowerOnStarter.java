@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-import jp.yksolution.android.sms.smsnotice.services.ServiceMain;
+import jp.yksolution.android.sms.smsnotice.services.EventService;
 
 /**
  * Android端末の再起動で呼ばれるクラス.
@@ -19,6 +19,6 @@ public class PowerOnStarter extends BroadcastReceiver {
      */
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, ServiceMain.class));
+        context.startService(new Intent(context, EventService.class));
     }
 }

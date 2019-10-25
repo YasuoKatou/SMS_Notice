@@ -33,8 +33,9 @@ import jp.yksolution.android.sms.smsnotice.utils.DateTime;
  * @since 0.0.1
  */
 public class MessageService extends ServiceBase implements DaoCallback {
-    private static String SENT = "SMS_SENT";
-    private static String DELIVERED = "SMS_DELIVERED";
+    private static final String MY_NAME = MessageService.class.getSimpleName();
+    private static final String SENT = "SMS_SENT";
+    private static final String DELIVERED = "SMS_DELIVERED";
 
     private static enum SMS_STATUS {
             NOT_YET, RETRY, ERROR
@@ -42,9 +43,8 @@ public class MessageService extends ServiceBase implements DaoCallback {
 
     @Override
     public void onCreate() {
-        String className = this.getClass().getSimpleName();
-        Log.d(super.getLogTag(className), className + ".onCreate");
-        super.create(className);
+        Log.d(super.getLogTag(MY_NAME), MY_NAME + ".onCreate");
+        super.create(MY_NAME);
         // DBアクセスサービスをバインド
         super.bindDbService();
 
@@ -63,16 +63,16 @@ public class MessageService extends ServiceBase implements DaoCallback {
 
     @Override
     public void onDestroy() {
-        Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]","onDestroy");
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME,"onDestroy");
 
         super.destroy("Service Main");
     }
 
     private void registMessage(String message) {
-        Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]","registMessage");
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME,"registMessage");
         Map<String, MyContacts.Entity> contactMap = this.getContacts();
         if (contactMap == null) {
-            Log.e(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]","no contacts");
+            Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME,"no contacts");
             return;
         }
 
@@ -118,7 +118,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
      */
     @Override
     public void finishedDbAccess(EntityBase e) {
-        Log.i(Thread.currentThread().getName(), "finishedDbAccess");
+        Log.i("[" + Thread.currentThread().getName() + "]" + MY_NAME, "finishedDbAccess");
         boolean kick = false;
         if (e instanceof MessageEntity) {
             MessageEntity entity = (MessageEntity)e;
@@ -151,14 +151,16 @@ public class MessageService extends ServiceBase implements DaoCallback {
                     hander.sendMessage(Message.obtain(hander, MESSAGE_WHAT_SMS_SEND, entity));
                 } else {
                     // リトライ中のメッセージなし
-                    Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]"
+                    Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                             ,"no more sned Message");
                 }
             } else {
-                Log.e("ERROR", "no supported process id : " + entity.getProcId());
+                Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME + ":ERROR"
+                        , "no supported process id : " + entity.getProcId());
             }
         } else {
-            Log.e("ERROR", "no supported entity class : " + e.toString());
+            Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME + ":ERROR"
+                    , "no supported entity class : " + e.toString());
         }
         if (kick) {
             // DBサービスをキックする
@@ -171,7 +173,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
     public static final int MESSAGE_WHAT_SMS_SEND = 2003;
     @Override
     public void executeMessage(Message msg) {
-        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                 , "executeMessage : " + ((msg == null) ? "null" : msg.toString()));
         switch (msg.what) {
             case MESSAGE_WHAT_INITIALIZE:
@@ -182,7 +184,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 break;
             case MESSAGE_WHAT_SMS_SEND:
                 if (mProcessingMessageEntity != null) {
-                    Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+                    Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                             , "sms busy... then wait...");
                     return;
                 }
@@ -193,7 +195,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
                     this.sendMessage(this.mProcessingMessageEntity.getPhoneNo()
                             , this.mProcessingMessageEntity.getMessage());
                 } else {
-                    Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+                    Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                             , "cyclic message");
                     // 未送信メッセージをＤＢから取得
                     MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE);
@@ -207,7 +209,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 this.removeBroadcastReceiver();
                 break;
             default:
-                Log.e(super.getLogTag(this.getClass().getSimpleName()), "不明なWHAT : " + msg.what);
+                Log.e(super.getLogTag(MY_NAME), "不明なWHAT : " + msg.what);
         }
     }
 
@@ -226,7 +228,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
         PendingIntent sentIntent = null;        // 送信の成否
         PendingIntent deliveryIntent = null;    // 受信者に届いたか否か
         smsManager.sendTextMessage(phoneNo, scAddress, text, this.mSentIntent, this.mDeliveryIntent);
-        Log.i(Thread.currentThread().getName(), phoneNo + " : " + text);
+        Log.i("[" + Thread.currentThread().getName() + "]" + MY_NAME, phoneNo + " : " + text);
     }
 
     private class SentReceiver extends BroadcastReceiver {
@@ -357,14 +359,24 @@ public class MessageService extends ServiceBase implements DaoCallback {
     private SentReceiver mSentReceiver = new SentReceiver();
     private DeliveredReceiver mDeliveredReceiver = new DeliveredReceiver();
     private void removeBroadcastReceiver() {
-        unregisterReceiver(this.mSentReceiver);
-        unregisterReceiver(this.mDeliveredReceiver);
-        Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]","removeBroadcastReceiver");
+        try {
+            unregisterReceiver(this.mSentReceiver);
+        } catch (Exception ex) {
+            Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    ,"removeBroadcastReceiver : " + ex.toString());
+        }
+        try {
+            unregisterReceiver(this.mDeliveredReceiver);
+        } catch (Exception ex) {
+            Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    ,"removeBroadcastReceiver : " + ex.toString());
+        }
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME,"removeBroadcastReceiver");
     }
     private void addBroadcastReceiver() {
         registerReceiver(this.mSentReceiver, new IntentFilter(SENT));
         registerReceiver(this.mDeliveredReceiver, new IntentFilter(DELIVERED));
-        Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]","addBroadcastReceiver");
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME,"addBroadcastReceiver");
     }
 
 //    private Map<String, MyContacts.Entity> mContactMap = null;
@@ -377,7 +389,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
         MyContacts contacts = new MyContacts(this);
         Map<String, MyContacts.Entity> contactMap = contacts.editContacts();
         long time = System.currentTimeMillis() - time1;
-        Log.d(Thread.currentThread().getName() + "[" + this.getClass().getSimpleName() + "]"
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
         , "Contact List process time : " + time + "ms, members : " + contactMap.values().size());
         return contactMap;
     }
