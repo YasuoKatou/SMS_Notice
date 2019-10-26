@@ -81,7 +81,9 @@ public class EventService extends ServiceBase {
             Resources res = getResources();
             final long sleepTime = res.getInteger(R.integer.sleep_01);
             final long cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
-            resetAggregateDto(System.currentTimeMillis(), true);
+            long now = System.currentTimeMillis();
+            long nextCyclicPostTime = now + cyclicPostTime;   // 次の定周期メッセージの時刻
+            resetAggregateDto(now, true);
             while (mExecuting) {
 //                Log.d("[" + Thread.currentThread().getName() + "]EventSensorTask","run");
                 try {
@@ -91,53 +93,15 @@ public class EventService extends ServiceBase {
                     Log.e("[" + Thread.currentThread().getName() + "]EventSensorTask", ex.toString());
                 }
                 mAggregateDto.time1 = aggregateCount();
+                if (nextCyclicPostTime < mAggregateDto.time1) {
+                    nextCyclicPostTime = mAggregateDto.time1 + cyclicPostTime;
+                    // メッセージサービスに空のメッセージをPOSTする
+                    mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
+                            , MessageService.MESSAGE_WHAT_SMS_SEND, null));
+                }
             }
             EventService.this.appendLog(new LogEntity(LogEntity.LOG_LEVEL.INFO, "Event Service end."));
         }
-/*
-        boolean oneTime = true;
-//        long time3 = time1 + cyclicPostTime;            // 次の定周期メッセージの時刻
-//        time1 = time1 - (time1 % 10000) + 10000;        // 次の１０秒を設定
-        while(this.mExecuting) {
-            long time2 = System.currentTimeMillis();
-            try {
-                Thread.sleep(sleepTime);
-//                Log.d(super.getLogTag(MY_NAME)
-//                        , super.now() + " : executeMessage in loop");
-//                if (count == 5 && oneTime) {
-//                    oneTime = false;
-//                    String text = "test message : " + DateTime.now();
-//                    this.mMessageServiceHandler.sendMessage(Message.obtain(
-//                            this.mMessageServiceHandler, MessageService.MESSAGE_WHAT_SMS_REGIST, text));
-//                }
-//                if (time3 < time2) {    // あまり厳密でないが、ソースをシンプルにする方が優先
-//                    // メッセージサービスに空のメッセージをPOSTする
-//                    this.mMessageServiceHandler.sendMessage(Message.obtain(
-//                            this.mMessageServiceHandler, MessageService.MESSAGE_WHAT_SMS_SEND, null));
-//                    time3 = time2 + cyclicPostTime;
-//                }
-            } catch (Exception ex) {
-                Log.e(super.getLogTag(MY_NAME), ex.toString());
-            }
-//            long now = System.currentTimeMillis();
-//            long procTime = now - time2;
-//            if (mxTime < procTime) mxTime = procTime;
-//            ++count;            // 処理回数 +1
-//            if (time1 <= now) {
-//                // 10秒間の処理をまとめる
-//                String dateTime = super.now();
-////                Log.d(super.getLogTag(MY_NAME)
-////                        , dateTime + " : " + String.format("c:%d, m:%d", count, mxTime));
-//                this.measuredLog(dateTime, count, mxTime);
-//                time1 = now - (now % 10000) + 10000;
-//                mxTime = 0L;
-//                count = 0L;
-//            }
-//            time2 = now;
-        }
-        this.mStopping = false;
-        Log.d(super.getLogTag(this.getClass().getSimpleName()), "exit executeMessage");
- */
     }
 
     private static class AggregateDto {
