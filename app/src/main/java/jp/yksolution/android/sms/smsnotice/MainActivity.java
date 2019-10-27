@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import jp.yksolution.android.sms.smsnotice.contacts.MyContacts;
-import jp.yksolution.android.sms.smsnotice.dao.DaoCallback;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.services.DbService;
@@ -42,17 +41,16 @@ import jp.yksolution.android.sms.smsnotice.services.ServiceBase;
  * @author Y.Katou (YKSolution)
  * @since 0.0.1
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, DaoCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private final static String TAG = MainActivity.class.getSimpleName();
     private static final String SERVICE_CLASS_NAME = EventService.class.getSimpleName();
-    private Handler mHandler;
+    private Handler mDBResultHadler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        this.mHandler = new Handler();
         this.refreshButton();
 
         // DBの作成／行使を行う
@@ -68,6 +66,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // SMS送信の許可状態を表示
         this.checkSMSSendButton();
+
+
+        /**
+         * ＤＢサービスからのクエリー終了通知を処理する.
+         */
+        mDBResultHadler = new Handler(getMainLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case EntityBase.MESSAGE_WHAT_QUERY_FINISHED:
+                        finishedDbAccess(msg.obj);
+                        break;
+                    default:
+                        Log.e(TAG, "不明なWHAT : " + msg.what);
+                }
+            }
+        };
     }
 
     private void checkContactsButton() {
@@ -117,6 +132,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.btnSmsSend:
                 this.allowSmsSend();
+                break;
+            case R.id.btnTestSMS:
+                this.mEventService.sendTestMesssage();
                 break;
             case R.id.btnShowLog:
                 this.showLog();
@@ -193,14 +211,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return;
         }
         LogEntity logEntity = new LogEntity(LogEntity.PROC_ID.LOG_LIST);
-        logEntity.setDaoCallback(this);
+        logEntity.setCallbackHandler(this.mDBResultHadler);
         this.mDbService.requestLog(logEntity);
         Object n = this.mDbServiceHandler.sendMessage(Message.obtain(this.mDbServiceHandler
                 , DbService.MESSAGE_WHAT_EXEC_QUERY, null));
     }
-    public void finishedDbAccess(EntityBase entity) {
-        if (entity instanceof LogEntity) {
-            List<LogEntity> list = ((LogEntity)entity).getLogList();
+
+    private void finishedDbAccess(Object o) {
+        if (o instanceof LogEntity) {
+            List<LogEntity> list = ((LogEntity)o).getLogList();
             if ((list == null) || (list.isEmpty())) {
                 Toast.makeText(this, "ログが登録されていません.", Toast.LENGTH_SHORT).show();
                 return;
@@ -209,23 +228,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             for (LogEntity item : list) {
                 contactsList.add(item.toLogViewString());
             }
-            this.mHandler.post(new DBResult(this, contactsList));
-        } else {
-            Log.e(TAG, "not supported entity : " + ((entity == null) ? "null" : entity.getClass().getName()));
-        }
-    }
-
-    private class DBResult extends Thread {
-        private final List<String> mList;
-        private final MainActivity mActivity;
-        private DBResult(MainActivity activity, List<String> list) {
-            this.mActivity = activity;
-            this.mList = list;
-        }
-        @Override
-        public void run() {
             ListView lv = (ListView) findViewById(R.id.lstApp);
-            lv.setAdapter(new ArrayAdapter<String>(this.mActivity, android.R.layout.simple_list_item_1, this.mList));
+            lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, contactsList));
+        } else {
+            Log.e(TAG, "not supported entity : " + ((o == null) ? "null" : o.getClass().getName()));
         }
     }
 

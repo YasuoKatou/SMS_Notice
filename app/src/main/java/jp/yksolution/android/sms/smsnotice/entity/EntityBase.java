@@ -1,8 +1,8 @@
 package jp.yksolution.android.sms.smsnotice.entity;
 
-import android.util.Log;
+import android.os.Handler;
+import android.os.Message;
 
-import jp.yksolution.android.sms.smsnotice.dao.DaoCallback;
 import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
 /**
@@ -11,6 +11,8 @@ import jp.yksolution.android.sms.smsnotice.utils.DateTime;
  * @since 0.0.1
  */
 public class EntityBase {
+    public static final int MESSAGE_WHAT_QUERY_FINISHED = 8001;
+
     /** このエンティティを処理するDaoクラス名. */
     protected String mDaoClassName;
     public String getDaoClassName() { return this.mDaoClassName; }
@@ -21,14 +23,15 @@ public class EntityBase {
     public final int getProcId() { return this.mProcId; }
     public final void setProcId(int procId) { this.mProcId = procId; }
 
-    /** DBアクセス終了後に呼び出すメソッド. */
-    private DaoCallback mDaoCallback = null;
-    public final DaoCallback getDaoCallback() { return this.mDaoCallback; }
-    public final void setDaoCallback(DaoCallback cb) { this.mDaoCallback = cb; }
+    /** DBアクセス終了後に送信するメッセージ. */
+    private Handler mMessageHandler = null;
+    public final Handler getCallbackHandler() { return this.mMessageHandler; }
+    public final void setCallbackHandler(Handler mh) { this.mMessageHandler = mh; }
 
     public final void finished() throws Exception {
-        if (this.mDaoCallback != null) {
-            this.mDaoCallback.finishedDbAccess(this);
+        if (this.mMessageHandler != null) {
+            this.mMessageHandler.sendMessage(Message.obtain(this.mMessageHandler
+                    , MESSAGE_WHAT_QUERY_FINISHED, this));
 //        } else {
 //            Log.d(Thread.currentThread().getName(), "no Dao Callback");
         }
@@ -43,7 +46,7 @@ public class EntityBase {
     protected void deepCopy(EntityBase entity) {
         entity.mProcId = this.mProcId;
         entity.mDaoClassName = this.mDaoClassName;
-        entity.mDaoCallback = this.mDaoCallback;
+        entity.mMessageHandler = this.mMessageHandler;
         entity.mResult = this.mResult;
     }
 

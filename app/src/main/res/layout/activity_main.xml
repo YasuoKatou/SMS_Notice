@@ -20,7 +20,7 @@
                 android:id="@+id/btnStartStopService"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="7"
+                android:layout_weight="2"
                 android:onClick="onClick"
                 android:text="@string/btnText_0111" />
 
@@ -28,7 +28,7 @@
                 android:id="@+id/btnRefreshServiceStatus"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="3"
+                android:layout_weight="1"
                 android:onClick="onClick"
                 android:text="@string/btnText_0120" />
         </LinearLayout>
@@ -53,6 +53,14 @@
                 android:layout_weight="1"
                 android:onClick="onClick"
                 android:text="@string/btnText_0140" />
+
+            <Button
+                android:id="@+id/btnTestSMS"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="@string/btnText_0150" />
 
         </LinearLayout>
 

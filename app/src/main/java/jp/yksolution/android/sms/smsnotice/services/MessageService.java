@@ -21,7 +21,6 @@ import java.util.Map;
 
 import jp.yksolution.android.sms.smsnotice.R;
 import jp.yksolution.android.sms.smsnotice.contacts.MyContacts;
-import jp.yksolution.android.sms.smsnotice.dao.DaoCallback;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
 import jp.yksolution.android.sms.smsnotice.entity.MessageEntity;
@@ -32,7 +31,7 @@ import jp.yksolution.android.sms.smsnotice.utils.DateTime;
  * @author Y.Katou (YKSolution)
  * @since 0.0.1
  */
-public class MessageService extends ServiceBase implements DaoCallback {
+public class MessageService extends ServiceBase {
     private static final String MY_NAME = MessageService.class.getSimpleName();
     private static final String SENT = "SMS_SENT";
     private static final String DELIVERED = "SMS_DELIVERED";
@@ -98,7 +97,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
             request.setCreateDate(now);
             request.setRetryCount(0);
             request.setBaseTime(nowLong + cnt);
-            request.setDaoCallback((++cnt == contantNum) ? this : null);
+            request.setCallbackHandler((++cnt == contantNum) ? super.mServiceHandler : null);
             super.mDbService.requestBusiness(request);
         }
         // DBサービスをキックする
@@ -114,10 +113,9 @@ public class MessageService extends ServiceBase implements DaoCallback {
      * DBアクセスの終了を処理する.
      * このメソッドは、ＤＢサービスのスレッドから呼ばれる。
      * SMSの送信は、このサービスのスレッドで実施する
-     * @param e Entityオブジェクト
+     * @param e オブジェクト
      */
-    @Override
-    public void finishedDbAccess(EntityBase e) {
+    private void finishedDbAccess(Object e) {
         Log.i("[" + Thread.currentThread().getName() + "]" + MY_NAME, "finishedDbAccess");
         boolean kick = false;
         if (e instanceof MessageEntity) {
@@ -125,20 +123,19 @@ public class MessageService extends ServiceBase implements DaoCallback {
             if (entity.getProcId() == MessageEntity.PROC_ID.NEW_MESSAGE) {
                 // SMS送信要求の登録完了のとき、未送信メッセージの取得を行う
                 MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE);
-                request.setDaoCallback(this);
+                request.setCallbackHandler(super.mServiceHandler);
                 super.mDbService.requestBusiness(request);
                 kick = true;
             } else if (entity.getProcId() == MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE) {
                 // 未送信のメッセージの取得完了
                 entity = entity.getMessageEntity();
                 if (entity != null) {
-                    // 未送信のメッセージあり
-                    Handler hander = super.mServiceHandler;
-                    hander.sendMessage(Message.obtain(hander, MESSAGE_WHAT_SMS_SEND, entity));
+                    // 未送信のメッセージを送信する
+                    this.sendSMS(entity);
                 } else {
                     // 未送信のメッセージがないとき、リトライ中のメッセージを取得
                     MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_RETRY_MESSAGE);
-                    request.setDaoCallback(this);
+                    request.setCallbackHandler(super.mServiceHandler);
                     super.mDbService.requestBusiness(request);
                     kick = true;
                 }
@@ -146,9 +143,8 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 // リトライ中のメッセージの取得完了
                 entity = entity.getMessageEntity();
                 if (entity != null) {
-                    // リトライ中のメッセージあり
-                    Handler hander = super.mServiceHandler;
-                    hander.sendMessage(Message.obtain(hander, MESSAGE_WHAT_SMS_SEND, entity));
+                    // リトライ中のメッセージを送信する
+                    this.sendSMS(entity);
                 } else {
                     // リトライ中のメッセージなし
                     Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
@@ -183,23 +179,17 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 this.registMessage((String)msg.obj);
                 break;
             case MESSAGE_WHAT_SMS_SEND:
-                if (mProcessingMessageEntity != null) {
-                    Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
-                            , "sms busy... then wait...");
-                    return;
-                }
                 Object o = msg.obj;
                 if (o instanceof MessageEntity) {
                     // SMS 送信
-                    this.mProcessingMessageEntity = (MessageEntity)o;
-                    this.sendMessage(this.mProcessingMessageEntity.getPhoneNo()
-                            , this.mProcessingMessageEntity.getMessage());
+                    this.sendSMS((MessageEntity)o);
                 } else {
+                    // イベントサービスからの定周期メッセージ（msg.obj = null）
                     Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                             , "cyclic message");
                     // 未送信メッセージをＤＢから取得
                     MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE);
-                    request.setDaoCallback(MessageService.this);
+                    request.setCallbackHandler(MessageService.super.mServiceHandler);
                     MessageService.super.mDbService.requestBusiness(request);
                     // DBサービスをキックする
                     this.kickDbService();
@@ -207,6 +197,9 @@ public class MessageService extends ServiceBase implements DaoCallback {
                 break;
             case ServiceBase.SERVICE_WHAT_LOOP_EXIT:
                 this.removeBroadcastReceiver();
+                break;
+            case EntityBase.MESSAGE_WHAT_QUERY_FINISHED:
+                this.finishedDbAccess(msg.obj);
                 break;
             default:
                 Log.e(super.getLogTag(MY_NAME), "不明なWHAT : " + msg.what);
@@ -219,10 +212,18 @@ public class MessageService extends ServiceBase implements DaoCallback {
     private PendingIntent mDeliveryIntent = null;
     /**
      * 指定の電話番号にメッセージを送信する
-     * @param phoneNo 送信先電話番号
-     * @param text 送信メッセージ
+     * @param entity メッセージエンティティ.
      */
-    private void sendMessage(String phoneNo, String text) {
+    private void sendSMS(MessageEntity entity) {
+        if (mProcessingMessageEntity != null) {
+            Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                    , "sms busy... then wait...");
+            return;
+        }
+        this.mProcessingMessageEntity = entity;
+        String phoneNo = entity.getPhoneNo();
+        String text    = entity.getMessage();
+
         SmsManager smsManager = SmsManager.getDefault();
         String scAddress = null;                // サービスセンターアドレス（null = デフォルト値）
         PendingIntent sentIntent = null;        // 送信の成否
@@ -239,8 +240,8 @@ public class MessageService extends ServiceBase implements DaoCallback {
             MessageEntity entity = mProcessingMessageEntity.deepCopy(MessageEntity.PROC_ID.SENT_MESSAGE);
             entity.setStatus(MessageEntity.NOTICE_STATUS.COMPLETED);
             entity.setUpdateDate(DateTime.now());
-            entity.setErrorMessage(null);       // nullは、更新なし
-            entity.setDaoCallback(null);        // 更新結果は不要
+            entity.setErrorMessage(null);        // nullは、更新なし
+            entity.setCallbackHandler(null);     // 更新結果は不要
             MessageService.super.mDbService.requestBusiness(entity);
 
             // ログの登録
@@ -278,7 +279,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
             entity.setRetryCount(callCount);
             entity.setBaseTime(baseTime);
             entity.setUpdateDate(DateTime.now());
-            entity.setDaoCallback(null);        // 更新結果は不要
+            entity.setCallbackHandler(null);     // 更新結果は不要
             MessageService.super.mDbService.requestBusiness(entity);
 
             // エラーログの登録
@@ -329,7 +330,7 @@ public class MessageService extends ServiceBase implements DaoCallback {
             }
             // SMS送信要求の取得（未送信を優先して取得する）
             MessageEntity request = new MessageEntity(MessageEntity.PROC_ID.SELECT_IDLE_MESSAGE);
-            request.setDaoCallback(MessageService.this);
+            request.setCallbackHandler(MessageService.super.mServiceHandler);
             MessageService.super.mDbService.requestBusiness(request);
             // DBサービスをキックする
             kickDbService();

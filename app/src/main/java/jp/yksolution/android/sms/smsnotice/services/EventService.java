@@ -120,7 +120,7 @@ public class EventService extends ServiceBase {
         if (newEntity) {
             this.mAggregateDto.entity = new ServiceCounterEntity();
             this.mAggregateDto.entity.setAggregateTime(DateTime.roudDownMinute(now));   // 直近の00分00秒
-            this.mAggregateDto.entity.setDaoCallback(null);     // 更新結果は、不要
+            this.mAggregateDto.entity.setCallbackHandler(null);     // 更新結果は、不要
         }
         this.mAggregateDto.timeIndex = DateTime.get10MibuteIndex(now);
         this.mAggregateDto.next10Minute = DateTime.next10Mibute(now);               // 次の10分の開始日時
@@ -186,6 +186,11 @@ public class EventService extends ServiceBase {
         super.destroy("Event Service");
     }
 
+    public void sendTestMesssage() {
+        String text = "test message : " + DateTime.now();
+        this.mMessageServiceHandler.sendMessage(Message.obtain(
+                this.mMessageServiceHandler, MessageService.MESSAGE_WHAT_SMS_REGIST, text));
+    }
 
     /**
      * メッセージサービス

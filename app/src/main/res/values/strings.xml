@@ -5,5 +5,6 @@
     <string name="btnText_0120">状態更新</string>
     <string name="btnText_0130">電話帳取得</string>
     <string name="btnText_0140">SMS送信許可</string>
+    <string name="btnText_0150">SMS送信テスト</string>
     <string name="btnText_9990">ログ取得</string>
 </resources>
