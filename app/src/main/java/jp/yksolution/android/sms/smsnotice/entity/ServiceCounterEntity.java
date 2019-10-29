@@ -3,6 +3,7 @@ package jp.yksolution.android.sms.smsnotice.entity;
 import android.text.format.DateFormat;
 
 import java.util.Date;
+import java.util.List;
 
 import jp.yksolution.android.sms.smsnotice.dao.ServiceCounterDao;
 
@@ -13,13 +14,15 @@ import jp.yksolution.android.sms.smsnotice.dao.ServiceCounterDao;
  */
 public class ServiceCounterEntity extends EntityBase {
     public static class PROC_ID {
-        /** 新規登録. */
-//        public static final int APPEND = 1;
         /** 10分単位データの更新. */
         public static final int ADD_COUNT = 2;
+        /** 24時間データの取得. */
+        public static final int LAST_24HOURS = 3;
     }
 
-    public ServiceCounterEntity() {
+    public ServiceCounterEntity() {}
+    public ServiceCounterEntity(int procId) {
+        super.mProcId = procId;
         super.mDaoClassName = ServiceCounterDao.class.getSimpleName();
     }
 
@@ -55,9 +58,13 @@ public class ServiceCounterEntity extends EntityBase {
      */
     public Integer getProcMaxTime() { return this.mProcMaxTime[this.index10Minute]; }
 
+    private List<ServiceCounterEntity> serviceCounterList;
+    public List<ServiceCounterEntity> getServiceCounterList() { return this.serviceCounterList; }
+    public void setServiceCounterList(List<ServiceCounterEntity> serviceCounterList) { this.serviceCounterList = serviceCounterList; }
+
     @Override
     public String toString() {
-        String dateTime = DateFormat.format("MM/dd kk:mm:ss", new Date(this.aggregateTime)).toString();
+        String dateTime = DateFormat.format("MM/dd kk", new Date(this.aggregateTime)).toString();
         StringBuilder sb = new StringBuilder(dateTime);
         for (int index = 0; index < this.mProcCount.length; ++index) {
             Integer val = this.mProcCount[index];

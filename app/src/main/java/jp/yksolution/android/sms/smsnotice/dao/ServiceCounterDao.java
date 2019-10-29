@@ -1,12 +1,17 @@
 package jp.yksolution.android.sms.smsnotice.dao;
 
 import android.content.ContentValues;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.ServiceCounterEntity;
+import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
 /**
  * サービス処理状況テーブルDao.
@@ -40,6 +45,9 @@ public class ServiceCounterDao extends DaoBase {
                 if (count == 0) {
                     addByInsert(db, entity);
                 }
+                break;
+            case ServiceCounterEntity.PROC_ID.LAST_24HOURS:
+                this.getLast24HoursLog(db, entity);
                 break;
             default:
                 Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME
@@ -104,6 +112,44 @@ public class ServiceCounterDao extends DaoBase {
             Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
                     ,"insert counter log : " + time + "ms (insert:" + count + ")");
         }
+    }
+
+    /**
+     * カウンタ情報を取得する.
+     * @param db SQLiteDatabase
+     * @param entity サービス処理状況テーブルエンティティ.
+     */
+    private void getLast24HoursLog(SQLiteDatabase db, ServiceCounterEntity entity) {
+        super.setStartTime();
+        boolean distinct = false;
+        String table = "t_svc_cnt";
+        String[] columns = new String[]{"count_date"
+                , "proc_cnt_00", "proc_max_00", "proc_cnt_10", "proc_max_10", "proc_cnt_20", "proc_max_20"
+                , "proc_cnt_30", "proc_max_30", "proc_cnt_40", "proc_max_40", "proc_cnt_50", "proc_max_50"};
+        String selection = "count_date >= ?";
+        String[] selectionArgs = new String[]{String.valueOf(entity.getAggregateTime())};
+        String groupBy = null;
+        String having = null;
+        String orderBy = "count_date desc";
+        String limit = null;
+        List<ServiceCounterEntity> list = new ArrayList<>();
+        try (Cursor cursor = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having, orderBy, limit)) {
+            while (cursor.moveToNext()) {
+                ServiceCounterEntity logEntity = new ServiceCounterEntity();
+                logEntity.setAggregateTime(cursor.getLong(0));
+                logEntity.setAggregateData(0, cursor.getInt(1), cursor.getInt(2));
+                logEntity.setAggregateData(1, cursor.getInt(3), cursor.getInt(4));
+                logEntity.setAggregateData(2, cursor.getInt(5), cursor.getInt(6));
+                logEntity.setAggregateData(3, cursor.getInt(7), cursor.getInt(8));
+                logEntity.setAggregateData(4, cursor.getInt(9), cursor.getInt(10));
+                logEntity.setAggregateData(5, cursor.getInt(11), cursor.getInt(12));
+                list.add(logEntity);
+            }
+        }
+        entity.setServiceCounterList(list);
+        long time = super.getProcessTime();
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                ,"select log time : " + time + "ms");
     }
 
     /**

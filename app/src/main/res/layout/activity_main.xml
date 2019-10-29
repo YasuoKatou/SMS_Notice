@@ -64,12 +64,35 @@
 
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btnShowLog"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:onClick="onClick"
-            android:text="@string/btnText_9990" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnApLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="@string/btnText_9990" />
+
+            <Button
+                android:id="@+id/btnProcLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="@string/btnText_9991" />
+
+            <Button
+                android:id="@+id/btnSmsLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="onClick"
+                android:text="@string/btnText_9992" />
+        </LinearLayout>
 
         <ListView
             android:id="@+id/lstApp"

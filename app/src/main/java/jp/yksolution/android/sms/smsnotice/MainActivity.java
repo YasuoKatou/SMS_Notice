@@ -25,16 +25,19 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import jp.yksolution.android.sms.smsnotice.contacts.MyContacts;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
+import jp.yksolution.android.sms.smsnotice.entity.ServiceCounterEntity;
 import jp.yksolution.android.sms.smsnotice.services.DbService;
 import jp.yksolution.android.sms.smsnotice.services.EventService;
 import jp.yksolution.android.sms.smsnotice.services.MessageService;
 import jp.yksolution.android.sms.smsnotice.services.ServiceBase;
+import jp.yksolution.android.sms.smsnotice.utils.DateTime;
 
 /**
  * メインアクティビティ.
@@ -136,8 +139,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btnTestSMS:
                 this.mEventService.sendTestMesssage();
                 break;
-            case R.id.btnShowLog:
+            case R.id.btnApLog:
                 this.showLog();
+                break;
+            case R.id.btnProcLog:
+                this.showProcLoc();
+                break;
+            case R.id.btnSmsLog:
                 break;
         }
     }
@@ -210,16 +218,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Toast.makeText(this, "DBアクセスサービスがバインドされていない", Toast.LENGTH_SHORT).show();
             return;
         }
-        LogEntity logEntity = new LogEntity(LogEntity.PROC_ID.LOG_LIST);
-        logEntity.setCallbackHandler(this.mDBResultHadler);
-        this.mDbService.requestLog(logEntity);
+        // クエリーパラメータの編集
+        LogEntity entity = new LogEntity(LogEntity.PROC_ID.LOG_LIST);
+        // クエリーリクエストを登録する
+        entity.setCallbackHandler(this.mDBResultHadler);
+        this.mDbService.requestLog(entity);
+        // ＤＢサービスを開始する
+        this.kickDBService();
+    }
+
+    private void showProcLoc() {
+        if (this.mDbService == null) {
+            Toast.makeText(this, "DBアクセスサービスがバインドされていない", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // クエリーパラメータの編集
+        ServiceCounterEntity entity = new ServiceCounterEntity(ServiceCounterEntity.PROC_ID.LAST_24HOURS);
+        entity.setAggregateTime(DateTime.before24Hour());
+        // クエリーリクエストを登録する
+        entity.setCallbackHandler(this.mDBResultHadler);
+        this.mDbService.requestLog(entity);
+        // ＤＢサービスを開始する
+        this.kickDBService();
+    }
+
+    private void kickDBService() {
         Object n = this.mDbServiceHandler.sendMessage(Message.obtain(this.mDbServiceHandler
                 , DbService.MESSAGE_WHAT_EXEC_QUERY, null));
     }
 
     private void finishedDbAccess(Object o) {
         if (o instanceof LogEntity) {
-            List<LogEntity> list = ((LogEntity)o).getLogList();
+            List<LogEntity> list = ((LogEntity) o).getLogList();
             if ((list == null) || (list.isEmpty())) {
                 Toast.makeText(this, "ログが登録されていません.", Toast.LENGTH_SHORT).show();
                 return;
@@ -230,6 +260,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             ListView lv = (ListView) findViewById(R.id.lstApp);
             lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, contactsList));
+        } else if (o instanceof ServiceCounterEntity) {
+            List<ServiceCounterEntity> serviceCounterlist = ((ServiceCounterEntity)o).getServiceCounterList();
+            if ((serviceCounterlist == null) || (serviceCounterlist.isEmpty())) {
+                Toast.makeText(this, "処理カウンタが登録されていません.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            List<String> list = new ArrayList<>();
+            for (ServiceCounterEntity item : serviceCounterlist) {
+//                Log.d("result : ", item.toString());
+                list.add(item.toString());
+            }
+            ListView lv = (ListView) findViewById(R.id.lstApp);
+            lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list));
         } else {
             Log.e(TAG, "not supported entity : " + ((o == null) ? "null" : o.getClass().getName()));
         }

@@ -75,4 +75,16 @@ public class DateTime {
         cal.add(Calendar.MINUTE, 10);       // 次の10分
         return cal.getTimeInMillis();
     }
+
+    /**
+     * 前日の同時間（分以下切り捨て）を取得する.
+     * @return
+     */
+    public static long before24Hour() {
+        long now = System.currentTimeMillis();
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(now - (now % (3600 * 1000)));      // 分以下の端数を切り捨てる
+        cal.add(Calendar.DAY_OF_MONTH, -1);          // １日前
+        return cal.getTimeInMillis();
+    }
 }

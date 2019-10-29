@@ -118,7 +118,7 @@ public class EventService extends ServiceBase {
         this.mAggregateDto.mxTime = 0L;     // 最大処理時間
         this.mAggregateDto.time1 = now;     // 処理開始日時
         if (newEntity) {
-            this.mAggregateDto.entity = new ServiceCounterEntity();
+            this.mAggregateDto.entity = new ServiceCounterEntity(ServiceCounterEntity.PROC_ID.ADD_COUNT);
             this.mAggregateDto.entity.setAggregateTime(DateTime.roudDownMinute(now));   // 直近の00分00秒
             this.mAggregateDto.entity.setCallbackHandler(null);     // 更新結果は、不要
         }
@@ -151,7 +151,6 @@ public class EventService extends ServiceBase {
         Log.d(DateTime.dateTimeFormat(now)+ " : " + super.getLogTag(MY_NAME)
                 , "change 10 numite : " + this.mAggregateDto.entity.toString());
         // 10分間のカウントの結果をＤＢに保存
-        this.mAggregateDto.entity.setProcId(ServiceCounterEntity.PROC_ID.ADD_COUNT);
         super.mDbService.requestMeasured(this.mAggregateDto.entity);    // ログのキュー登録
         super.mDbServiceHandler.sendMessage(Message.obtain(super.mDbServiceHandler
                 , DbService.MESSAGE_WHAT_EXEC_QUERY, null));        // 書込みメッセージ
