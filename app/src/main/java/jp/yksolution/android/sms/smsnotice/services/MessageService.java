@@ -76,8 +76,7 @@ public class MessageService extends ServiceBase {
         }
 
         // 通知先分メッセージ送信レコードを登録する
-        String now = DateTime.now();
-        long nowLong = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         int contantNum = contactMap.values().size();
         int cnt = 0;
         for (MyContacts.Entity contact : contactMap.values()) {
@@ -96,7 +95,7 @@ public class MessageService extends ServiceBase {
             request.setStatus(MessageEntity.NOTICE_STATUS.IDLE);
             request.setCreateDate(now);
             request.setRetryCount(0);
-            request.setBaseTime(nowLong + cnt);
+            request.setBaseTime(now + cnt);
             request.setCallbackHandler((++cnt == contantNum) ? super.mServiceHandler : null);
             super.mDbService.requestBusiness(request);
         }
@@ -116,7 +115,7 @@ public class MessageService extends ServiceBase {
      * @param e オブジェクト
      */
     private void finishedDbAccess(Object e) {
-        Log.i("[" + Thread.currentThread().getName() + "]" + MY_NAME, "finishedDbAccess");
+//        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME, "finishedDbAccess");
         boolean kick = false;
         if (e instanceof MessageEntity) {
             MessageEntity entity = (MessageEntity)e;
@@ -239,7 +238,7 @@ public class MessageService extends ServiceBase {
         private void updateSmsTable() {
             MessageEntity entity = mProcessingMessageEntity.deepCopy(MessageEntity.PROC_ID.SENT_MESSAGE);
             entity.setStatus(MessageEntity.NOTICE_STATUS.COMPLETED);
-            entity.setUpdateDate(DateTime.now());
+            entity.setUpdateDate(System.currentTimeMillis());
             entity.setErrorMessage(null);        // nullは、更新なし
             entity.setCallbackHandler(null);     // 更新結果は不要
             MessageService.super.mDbService.requestBusiness(entity);
@@ -278,14 +277,14 @@ public class MessageService extends ServiceBase {
             entity.setErrorMessage(errMsg);
             entity.setRetryCount(callCount);
             entity.setBaseTime(baseTime);
-            entity.setUpdateDate(DateTime.now());
+            entity.setUpdateDate(System.currentTimeMillis());
             entity.setCallbackHandler(null);     // 更新結果は不要
             MessageService.super.mDbService.requestBusiness(entity);
 
             // エラーログの登録
             LogEntity logEntity = new LogEntity(logLevel, "SMS Send : " + errMsg);
             MessageService.super.mDbService.requestLog(logEntity);
-            Log.d(DateTime.now() + " retry time : ", DateTime.dateTimeFormat(baseTime));
+            Log.d(DateTime.now() + " retry time", DateTime.dateTimeFormat(baseTime));
         }
 
         @Override

@@ -23,6 +23,14 @@ public class DateTime {
         return DateFormat.format("yyyy/MM/dd kk:mm:ss", new Date(msec)).toString();
     }
 
+    public static String mmddHHMMFormat(long msec) {
+        return DateFormat.format("MM/dd kk:mm", new Date(msec)).toString();
+    }
+
+    public static String HHMMFormat(long msec) {
+        return DateFormat.format("kk:mm", new Date(msec)).toString();
+    }
+
     /**
      * 日時の分以下を切り捨てる.
      * @param tm 日時

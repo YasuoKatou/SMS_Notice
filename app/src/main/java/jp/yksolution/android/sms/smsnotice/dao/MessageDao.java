@@ -45,8 +45,8 @@ public class MessageDao extends DaoBase {
      */
     private static String editInsert() {
         StringBuffer insert = new StringBuffer("insert into t_msg");
-        insert.append(" (phone_no,phone_name,message,status,base_time,create_date,call_count) values")
-                .append(" (?,?,?,?,?,?,?)");
+        insert.append(" (phone_no,phone_name,message,status,base_time,create_date,call_count,update_date) values")
+                .append(" (?,?,?,?,?,?,?,?)");
         return insert.toString();
     }
 
@@ -73,6 +73,9 @@ public class MessageDao extends DaoBase {
             case MessageEntity.PROC_ID.SENT_MESSAGE:
                 this.updateSendStatus(db, entity);
                 break;
+            case MessageEntity.PROC_ID.LAST_24HOURS:
+                this.getLast24HoursLog(db, entity);
+                break;
             default:
                 Log.e("[" + Thread.currentThread().getName() + "]" + MY_NAME
                         ,"not supported ProcId : " + entity.getProcId());
@@ -93,8 +96,9 @@ public class MessageDao extends DaoBase {
                 statement.bindString(3, entity.getMessage());
                 statement.bindString(4, entity.getStatus().toString());
                 statement.bindLong(5, entity.getBaseTime());
-                statement.bindString(6, entity.getCreateDate());
+                statement.bindLong(6, entity.getCreateDate());
                 statement.bindLong(7, entity.getRetryCount());
+                statement.bindLong(8, entity.getCreateDate());
                 statement.executeInsert();
                 db.setTransactionSuccessful();
             }
@@ -209,6 +213,41 @@ public class MessageDao extends DaoBase {
     }
 
     /**
+     * カウンタ情報を取得する.
+     * @param db SQLiteDatabase
+     * @param entity サービス処理状況テーブルエンティティ.
+     */
+    private void getLast24HoursLog(SQLiteDatabase db, MessageEntity entity) {
+        super.setStartTime();
+        boolean distinct = false;
+        String table = "t_msg";
+        String[] columns = new String[]{"update_date", "message", "phone_no", "status", "err_msg", "create_date"};
+        String selection = "update_date >= ?";
+        String[] selectionArgs = new String[]{String.valueOf(entity.getBaseTime())};
+        String groupBy = null;
+        String having = null;
+        String orderBy = "create_date desc";
+        String limit = null;
+        List<MessageEntity> list = new ArrayList<>();
+        try (Cursor cursor = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having, orderBy, limit)) {
+            while (cursor.moveToNext()) {
+                MessageEntity item = new MessageEntity();
+                item.setUpdateDate(cursor.getLong(0));
+                item.setMessage(cursor.getString(1));
+                item.setPhoneNo(cursor.getString(2));
+                item.setStatus(cursor.getString(3));
+                item.setErrorMessage(cursor.getString(4));
+                item.setCreateDate(cursor.getLong(5));
+                list.add(item);
+            }
+        }
+        entity.setMessageEntityList(list);
+        long time = super.getProcessTime();
+        Log.d("[" + Thread.currentThread().getName() + "]" + MY_NAME
+                ,"select log time : " + time + "ms");
+    }
+
+    /**
      * メッセージ送信管理テーブル作成する.
      * @param db SQLiteDatabase
      */
@@ -225,10 +264,10 @@ public class MessageDao extends DaoBase {
            .append(",status text not null")      // 送信状態
            .append(",err_msg text")              // エラーメッセージ
            .append(",call_count integer")        // 再送回数
-           .append(",base_time int not null")   // 基準時間
-           .append(",create_date text not null") // 作成日時
-           .append(",update_date text")          // 更新日時
-           .append(",delivered text")            // 既読日時
+           .append(",base_time integer not null")   // 基準時間
+           .append(",create_date integer not null") // 作成日時
+           .append(",update_date integer")          // 更新日時
+           .append(",delivered integer")            // 既読日時
            .append(");");
         Log.d(tag, "CREATE TABLE : " + ddl.toString());
         db.execSQL(ddl.toString());

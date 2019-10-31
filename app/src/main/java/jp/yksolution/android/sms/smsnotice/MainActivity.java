@@ -32,6 +32,7 @@ import java.util.Map;
 import jp.yksolution.android.sms.smsnotice.contacts.MyContacts;
 import jp.yksolution.android.sms.smsnotice.entity.EntityBase;
 import jp.yksolution.android.sms.smsnotice.entity.LogEntity;
+import jp.yksolution.android.sms.smsnotice.entity.MessageEntity;
 import jp.yksolution.android.sms.smsnotice.entity.ServiceCounterEntity;
 import jp.yksolution.android.sms.smsnotice.services.DbService;
 import jp.yksolution.android.sms.smsnotice.services.EventService;
@@ -70,6 +71,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // SMS送信の許可状態を表示
         this.checkSMSSendButton();
 
+        if (this.inServiceing(SERVICE_CLASS_NAME)) {
+            // イベントサービスが実行中の場合、イベントサービスをバインド
+            bindService(new Intent(getApplicationContext(), EventService.class), this.mEventServiceConnection, Context.BIND_AUTO_CREATE);
+        }
 
         /**
          * ＤＢサービスからのクエリー終了通知を処理する.
@@ -143,9 +148,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 this.showLog();
                 break;
             case R.id.btnProcLog:
-                this.showProcLoc();
+                this.showProcLog();
                 break;
             case R.id.btnSmsLog:
+                this.showSmsLog();
                 break;
         }
     }
@@ -227,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         this.kickDBService();
     }
 
-    private void showProcLoc() {
+    private void showProcLog() {
         if (this.mDbService == null) {
             Toast.makeText(this, "DBアクセスサービスがバインドされていない", Toast.LENGTH_SHORT).show();
             return;
@@ -235,6 +241,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // クエリーパラメータの編集
         ServiceCounterEntity entity = new ServiceCounterEntity(ServiceCounterEntity.PROC_ID.LAST_24HOURS);
         entity.setAggregateTime(DateTime.before24Hour());
+        // クエリーリクエストを登録する
+        entity.setCallbackHandler(this.mDBResultHadler);
+        this.mDbService.requestLog(entity);
+        // ＤＢサービスを開始する
+        this.kickDBService();
+    }
+
+    private void showSmsLog() {
+        if (this.mDbService == null) {
+            Toast.makeText(this, "DBアクセスサービスがバインドされていない", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // クエリーパラメータの編集
+        MessageEntity entity = new MessageEntity(MessageEntity.PROC_ID.LAST_24HOURS);
+        entity.setBaseTime(DateTime.before24Hour());
         // クエリーリクエストを登録する
         entity.setCallbackHandler(this.mDBResultHadler);
         this.mDbService.requestLog(entity);
@@ -270,6 +291,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             for (ServiceCounterEntity item : serviceCounterlist) {
 //                Log.d("result : ", item.toString());
                 list.add(item.toString());
+            }
+            ListView lv = (ListView) findViewById(R.id.lstApp);
+            lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list));
+        } else if (o instanceof MessageEntity) {
+            List<MessageEntity> messageList = ((MessageEntity)o).getMessageEntityList();
+            if ((messageList == null) || (messageList.isEmpty())) {
+                Toast.makeText(this, "メッセージが登録されていません.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            List<String> list = new ArrayList<>();
+            String title = null;
+            long dateTime = 0;
+            for (MessageEntity item : messageList) {
+//                Log.d("result : ", item.toString());
+                if ((dateTime != item.getCreateDate()) && !item.getMessage().equals(title)) {
+                    list.add(item.toTitleString());
+                    title = item.getMessage();
+                    dateTime = item.getCreateDate();
+                }
+                list.add(item.toResultString());
             }
             ListView lv = (ListView) findViewById(R.id.lstApp);
             lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, list));

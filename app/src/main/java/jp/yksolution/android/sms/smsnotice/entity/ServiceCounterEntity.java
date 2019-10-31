@@ -17,7 +17,7 @@ public class ServiceCounterEntity extends EntityBase {
         /** 10分単位データの更新. */
         public static final int ADD_COUNT = 2;
         /** 24時間データの取得. */
-        public static final int LAST_24HOURS = 3;
+        public static final int LAST_24HOURS = 91;
     }
 
     public ServiceCounterEntity() {}
