@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         this.refreshButton();
 
-        // DBの作成／行使を行う
+        // DBの作成／更新を行う
         DbHelper dbHelper = new DbHelper(this);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         db.close();
@@ -123,10 +123,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.btnStartStopService:
                 if (this.inServiceing(SERVICE_CLASS_NAME)) {
-                    // サービス実行中の場合、停止
+                    // サービス実行中の場合、サービスを停止する
                     this.stopService();
                 } else {
-                    // サービス停止の場合、起動
+                    // サービス停止の場合、サービスを起動する
                     this.startService();
                 }
                 this.refreshButton();
@@ -326,8 +326,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else {
             startForegroundService(intent);
         }
-        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
-                , "アプリは、イベントサービスを起動しました");
+//        Log.d("[" + Thread.currentThread().getName() + "]" + this.getClass().getSimpleName()
+//                , "アプリは、イベントサービスを起動しました");
+        Toast.makeText(this, "サービスを起動しました", Toast.LENGTH_SHORT).show();
         this.refreshButton();
 
         // イベントサービスをバインド

@@ -50,58 +50,80 @@ public class EventService extends ServiceBase {
     }
 
     public static final int EVENT_SERVICE_WHAT_EXECUTE = 1002;
-    private boolean mExecuting = false;
-    private boolean mStopping = false;
     @Override
     void executeMessage(Message msg) {
         Log.d(super.getLogTag(MY_NAME), "executeMessage");
         if (msg.what == ServiceBase.SERVICE_WHAT_LOOP_EXIT) {
+            // サービス終了
+            this.stopSensorThread();
             // メッセージサービスの終了処理を要求
             mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
                     , ServiceBase.SERVICE_WHAT_LOOP_EXIT, null));
-            // サービス終了
-            this.mExecuting = false;
+            super.appendLog(new LogEntity(LogEntity.LOG_LEVEL.INFO, "Event Service stop."));
         } else if (msg.what == EVENT_SERVICE_WHAT_EXECUTE) {
             // サービス開始
-            if (this.mExecuting) {
-                Log.i(super.getLogTag(MY_NAME), "executeMessage already executing");
-                return;
-            }
-            this.mExecuting = true;
-            new Thread(new EventSensorTask()).start();
+            this.executeSensorTask();
         } else {
             Log.e(super.getLogTag(MY_NAME), "不明なWHAT : " + msg.what);
             return;
         }
     }
 
-    private class EventSensorTask implements Runnable {
+    private Handler mEventSensorHandler = null;
+    private Runnable mEventSensorThread = null;
+    private class EventSensorThread implements Runnable {
+        private final long sleepTime;
+        private final long cyclicPostTime;
+        public EventSensorThread() {
+            Resources res = getResources();
+            this.sleepTime = res.getInteger(R.integer.sleep_01);
+            this.cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
+            // 次の定周期メッセージの時刻を設定
+            long now = System.currentTimeMillis();
+            this.nextCyclicPostTime = now + this.cyclicPostTime;
+
+            resetAggregateDto(now, true);
+        }
+
+        /** 次の定周期メッセージの時刻. */
+        private long nextCyclicPostTime;
         @Override
         public void run() {
-            Resources res = getResources();
-            final long sleepTime = res.getInteger(R.integer.sleep_01);
-            final long cyclicPostTime = res.getInteger(R.integer.cyclic_post_time_01);
-            long now = System.currentTimeMillis();
-            long nextCyclicPostTime = now + cyclicPostTime;   // 次の定周期メッセージの時刻
-            resetAggregateDto(now, true);
-            while (mExecuting) {
-//                Log.d("[" + Thread.currentThread().getName() + "]EventSensorTask","run");
-                try {
-                    Thread.sleep(sleepTime);
-                    // TODO ここに処理を実装する
-                } catch (Exception ex) {
-                    Log.e("[" + Thread.currentThread().getName() + "]EventSensorTask", ex.toString());
-                }
-                mAggregateDto.time1 = aggregateCount();
-                if (nextCyclicPostTime < mAggregateDto.time1) {
-                    nextCyclicPostTime = mAggregateDto.time1 + cyclicPostTime;
-                    // メッセージサービスに空のメッセージをPOSTする
-                    mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
-                            , MessageService.MESSAGE_WHAT_SMS_SEND, null));
-                }
+//            Log.d("[" + Thread.currentThread().getName() + "]EventSensorTask","run");
+            // ---------------------------
+            // TODO ここに処理を実装する
+
+            mAggregateDto.time1 = aggregateCount();
+            // ---------------------------
+            // 定周期メッセージの送信
+            if (this.nextCyclicPostTime < mAggregateDto.time1) {
+                // 次の定周期メッセージの時刻を設定
+                this.nextCyclicPostTime = mAggregateDto.time1 + this.cyclicPostTime;
+                // 定周期メッセージの送信
+                mMessageServiceHandler.sendMessage(Message.obtain(mMessageServiceHandler
+                        , MessageService.MESSAGE_WHAT_SMS_SEND, null));
             }
-            EventService.this.appendLog(new LogEntity(LogEntity.LOG_LEVEL.INFO, "Event Service end."));
+            // wait
+            mEventSensorHandler.postDelayed(mEventSensorThread, this.sleepTime);
         }
+    }
+
+    private void stopSensorThread() {
+        if ((this.mEventSensorHandler != null) && (this.mEventSensorThread != null)) {
+            this.mEventSensorHandler.removeCallbacks(this.mEventSensorThread);
+            this.mEventSensorHandler = null;
+            this.mEventSensorThread  = null;
+        }
+    }
+
+    private void executeSensorTask() {
+        if (this.mEventSensorThread != null) {
+            Log.i(super.getLogTag(MY_NAME), "already executing sensor thread");
+            return;
+        }
+        this.mEventSensorThread = new EventSensorThread();
+        this.mEventSensorHandler = new Handler();
+        this.mEventSensorHandler.post(mEventSensorThread);
     }
 
     private static class AggregateDto {
@@ -168,19 +190,7 @@ public class EventService extends ServiceBase {
             unbindService(mMessageServiceConnection);
             mMessageService = null;
         }
-        this.mStopping = true;
-        this.mExecuting = false;
-        for (int cnt = 0; this.mStopping && (cnt < 3); ++cnt) {
-            try {
-                Thread.sleep(1000L);
-            } catch (Exception ex) {
-            }
-        }
-        if (this.mStopping) {
-            Log.i(super.getLogTag(MY_NAME), "not stopped service");
-        } else {
-            Log.d(super.getLogTag(MY_NAME), "stopped service normally");
-        }
+        this.stopSensorThread();
 
         super.destroy("Event Service");
     }
