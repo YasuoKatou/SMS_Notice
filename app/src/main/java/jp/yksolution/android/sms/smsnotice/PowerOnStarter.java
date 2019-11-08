@@ -3,6 +3,8 @@ package jp.yksolution.android.sms.smsnotice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.util.Log;
 
 import jp.yksolution.android.sms.smsnotice.services.EventService;
 
@@ -19,6 +21,14 @@ public class PowerOnStarter extends BroadcastReceiver {
      */
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, EventService.class));
+        Log.d("PowerOnStarter", "onReceive");
+        Intent svcIntent = new Intent(context, EventService.class);
+        if (Build.VERSION.SDK_INT <= 25) {
+            Log.d("PowerOnStarter", "startService");
+            context.startService(svcIntent);
+        } else {
+            Log.d("PowerOnStarter", "startForegroundService");
+            context.startForegroundService(svcIntent);
+        }
     }
 }

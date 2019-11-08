@@ -22,6 +22,7 @@
             <!-- 受信するBroadcastIntentの種類を設定 -->
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
@@ -42,5 +43,6 @@
     <uses-permission-sdk-23 android:name="android.permission.READ_CONTACTS" />
     <uses-permission-sdk-23 android:name="android.permission.SEND_SMS"/>
     <uses-permission-sdk-23 android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
 </manifest>
